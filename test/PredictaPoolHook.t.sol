@@ -115,8 +115,14 @@ contract PredictaPoolHookTest is Test {
     function test_createEvent() public {
         hook.createEvent(EVENT_ID, "Argentina vs Brazil", 3, DEADLINE, poolKey);
 
-        (string memory name, uint8 numOutcomes,, bool resolved, bool settled, uint256 deadline,,,,, uint256 swapCount) =
-            hook.getEvent(EVENT_ID);
+        (
+            string memory name,
+            uint8 numOutcomes,,
+            bool resolved,
+            bool settled,,
+            uint256 deadline,,,,,
+            uint256 swapCount
+        ) = hook.getEvent(EVENT_ID);
 
         assertEq(name, "Argentina vs Brazil");
         assertEq(numOutcomes, 3);
@@ -167,7 +173,7 @@ contract PredictaPoolHookTest is Test {
         vm.prank(charlie);
         hook.predict(EVENT_ID, 2, DEPOSIT, DEPOSIT);
 
-        (,,,,,, uint256 totalDep0, uint256 totalDep1,,,) = hook.getEvent(EVENT_ID);
+        (,,,,,,, uint256 totalDep0, uint256 totalDep1,,,) = hook.getEvent(EVENT_ID);
         assertEq(totalDep0, DEPOSIT * 3);
         assertEq(totalDep1, DEPOSIT * 3);
     }
@@ -189,15 +195,30 @@ contract PredictaPoolHookTest is Test {
         hook.predict(EVENT_ID, 3, DEPOSIT, DEPOSIT);
     }
 
-    function test_predict_alreadyPredicted_reverts() public {
+    function test_predict_addToExisting() public {
         _createDefaultEvent();
 
         vm.prank(alice);
         hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
 
         vm.prank(alice);
-        vm.expectRevert(PredictaPoolHook.AlreadyPredicted.selector);
         hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        (uint8 outcome, uint256 dep0, uint256 dep1,,) = hook.predictions(EVENT_ID, alice);
+        assertEq(outcome, 0);
+        assertEq(dep0, DEPOSIT * 2);
+        assertEq(dep1, DEPOSIT * 2);
+    }
+
+    function test_predict_outcomeMismatch_reverts() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.prank(alice);
+        vm.expectRevert(PredictaPoolHook.OutcomeMismatch.selector);
+        hook.predict(EVENT_ID, 1, DEPOSIT, DEPOSIT);
     }
 
     function test_predict_resolvedEvent_reverts() public {
@@ -221,7 +242,7 @@ contract PredictaPoolHookTest is Test {
         _doSwap(true, -100e18);
         _doSwap(false, -100e18);
 
-        (,,,,,,,,,, uint256 swapCount) = hook.getEvent(EVENT_ID);
+        (,,,,,,,,,,, uint256 swapCount) = hook.getEvent(EVENT_ID);
         assertEq(swapCount, 2);
     }
 
@@ -232,7 +253,7 @@ contract PredictaPoolHookTest is Test {
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 0);
 
-        (,, uint8 winOutcome, bool resolved,,,,,,,) = hook.getEvent(EVENT_ID);
+        (,, uint8 winOutcome, bool resolved,,,,,,,,) = hook.getEvent(EVENT_ID);
         assertTrue(resolved);
         assertEq(winOutcome, 0);
     }
@@ -270,9 +291,10 @@ contract PredictaPoolHookTest is Test {
 
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(EVENT_ID);
 
-        (,,,, bool settled,,,,, uint256 totalRet1,) = hook.getEvent(EVENT_ID);
+        (,,,, bool settled,,,,,,,) = hook.getEvent(EVENT_ID);
         assertTrue(settled);
     }
 
@@ -294,6 +316,7 @@ contract PredictaPoolHookTest is Test {
 
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(EVENT_ID);
 
         vm.expectRevert(PredictaPoolHook.EventAlreadySettled.selector);
@@ -324,6 +347,7 @@ contract PredictaPoolHookTest is Test {
 
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(EVENT_ID);
 
         vm.prank(bob);
@@ -339,6 +363,7 @@ contract PredictaPoolHookTest is Test {
 
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(EVENT_ID);
 
         vm.prank(alice);
@@ -370,6 +395,7 @@ contract PredictaPoolHookTest is Test {
         // Resolve: outcome 0 wins (Alice wins)
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(EVENT_ID);
 
         uint256 aliceBal0Before = tokenA.balanceOf(alice);
@@ -403,6 +429,7 @@ contract PredictaPoolHookTest is Test {
         // No swaps — no yield generated
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(EVENT_ID);
 
         vm.prank(alice);
@@ -433,6 +460,7 @@ contract PredictaPoolHookTest is Test {
         // Outcome 2 wins (Charlie wins, Alice and Bob lose)
         vm.warp(DEADLINE + 1);
         hook.resolveEvent(EVENT_ID, 2);
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(EVENT_ID);
 
         uint256 charlieBal0Before = tokenA.balanceOf(charlie);

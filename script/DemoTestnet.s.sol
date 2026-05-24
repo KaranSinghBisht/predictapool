@@ -52,9 +52,7 @@ contract DemoTestnet is Script {
         swapRouter.swap(
             poolKey,
             IPoolManager.SwapParams({
-                zeroForOne: true,
-                amountSpecified: -500e18,
-                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
+                zeroForOne: true, amountSpecified: -500e18, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
             }),
             settings,
             ""
@@ -64,9 +62,7 @@ contract DemoTestnet is Script {
         swapRouter.swap(
             poolKey,
             IPoolManager.SwapParams({
-                zeroForOne: false,
-                amountSpecified: -500e18,
-                sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
+                zeroForOne: false, amountSpecified: -500e18, sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
             }),
             settings,
             ""
@@ -75,7 +71,7 @@ contract DemoTestnet is Script {
 
         vm.stopBroadcast();
 
-        (,,,,,, uint256 dep0, uint256 dep1,,, uint256 swapCount) = hook.getEvent(eventId);
+        (,,,,,,, uint256 dep0, uint256 dep1,,, uint256 swapCount) = hook.getEvent(eventId);
         console.log("Total deposits token0:", dep0);
         console.log("Total deposits token1:", dep1);
         console.log("Swap count:", swapCount);

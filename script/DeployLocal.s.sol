@@ -127,7 +127,7 @@ contract DeployLocal is Script {
         console.log("Swap 3: 200 token0 -> token1");
 
         // ── 10. Check event state ────────────────────────────────────
-        (,,,,,, uint256 dep0, uint256 dep1,,, uint256 swapCount) = hook.getEvent(eventId);
+        (,,,,,,, uint256 dep0, uint256 dep1,,, uint256 swapCount) = hook.getEvent(eventId);
         console.log("Total deposits token0:", dep0);
         console.log("Total deposits token1:", dep1);
         console.log("Swap count:", swapCount);
@@ -138,9 +138,10 @@ contract DeployLocal is Script {
         console.log("Event resolved: Argentina wins (outcome 0)");
 
         // ── 12. Settle event (remove LP) ─────────────────────────────
+        vm.warp(block.timestamp + 3601);
         hook.settleEvent(eventId);
 
-        (,,,,,,,, uint256 ret0, uint256 ret1,) = hook.getEvent(eventId);
+        (,,,,,,,,, uint256 ret0, uint256 ret1,) = hook.getEvent(eventId);
         console.log("Total return token0:", ret0);
         console.log("Total return token1:", ret1);
 
