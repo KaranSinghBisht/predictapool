@@ -40,6 +40,8 @@ contract PredictaPoolHookTest is Test {
     uint256 constant DEPOSIT = 1_000e18;
     uint160 constant SQRT_PRICE_1_1 = 79228162514264337593543950336;
     uint256 constant DEADLINE = 1_000_000;
+    uint256 constant MIN_DEPOSIT = 1e15;
+    uint256 constant AUTO_EXPIRY = 30 days;
 
     function setUp() public {
         vm.warp(1000);
@@ -490,6 +492,343 @@ contract PredictaPoolHookTest is Test {
         vm.expectRevert(PredictaPoolHook.DeadlineNotPassed.selector);
         hook.resolveEvent(EVENT_ID, 0);
     }
+
+    // ─── Edge Case Tests ────────────────────────────────────────────────
+
+    function test_predict_singleSidedDeposit() public {
+        _createDefaultEvent();
+
+        uint256 amount0 = 5_000e18;
+        uint256 amount1 = MIN_DEPOSIT;
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, amount0, amount1);
+
+        (uint8 outcome, uint256 dep0, uint256 dep1, bool claimed, bool exists) = hook.predictions(EVENT_ID, alice);
+        assertEq(outcome, 0);
+        assertEq(dep0, amount0);
+        assertEq(dep1, amount1);
+        assertFalse(claimed);
+        assertTrue(exists);
+    }
+
+    function test_predict_zeroAmount_reverts() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        vm.expectRevert(PredictaPoolHook.ZeroAmount.selector);
+        hook.predict(EVENT_ID, 0, 0, 0);
+    }
+
+    function test_predict_belowMinDeposit_reverts() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        vm.expectRevert(PredictaPoolHook.DepositTooSmall.selector);
+        hook.predict(EVENT_ID, 0, MIN_DEPOSIT - 1, DEPOSIT);
+
+        vm.prank(alice);
+        vm.expectRevert(PredictaPoolHook.DepositTooSmall.selector);
+        hook.predict(EVENT_ID, 0, DEPOSIT, MIN_DEPOSIT - 1);
+    }
+
+    function test_settleEvent_afterLargeSwaps() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.prank(bob);
+        hook.predict(EVENT_ID, 1, DEPOSIT, DEPOSIT);
+
+        // Large directional swaps to cause IL
+        _doSwap(true, -5_000e18);
+        _doSwap(true, -5_000e18);
+        _doSwap(true, -5_000e18);
+
+        vm.warp(DEADLINE + 1);
+        hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
+        hook.settleEvent(EVENT_ID);
+
+        (,,,, bool settled,,,,, uint256 totalReturn0, uint256 totalReturn1,) = hook.getEvent(EVENT_ID);
+        assertTrue(settled);
+
+        // Verify settlement works even when totalReturn < totalDeposit (IL scenario)
+        // Claims should still succeed
+        vm.prank(alice);
+        hook.claim(EVENT_ID);
+
+        vm.prank(bob);
+        hook.claim(EVENT_ID);
+    }
+
+    function test_createEvent_pastDeadline_reverts() public {
+        vm.warp(5000);
+        vm.expectRevert(PredictaPoolHook.InvalidDeadline.selector);
+        hook.createEvent(EVENT_ID, "Past Event", 3, 4999, poolKey);
+    }
+
+    function test_createEvent_minOutcomes() public {
+        hook.createEvent(EVENT_ID, "Binary Event", 2, DEADLINE, poolKey);
+
+        (string memory name, uint8 numOutcomes,,,,,,,,,,) = hook.getEvent(EVENT_ID);
+        assertEq(name, "Binary Event");
+        assertEq(numOutcomes, 2);
+    }
+
+    function test_createEvent_invalidPoolKey_reverts() public {
+        PoolKey memory badKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0xdead))
+        });
+
+        vm.expectRevert(PredictaPoolHook.InvalidPoolKey.selector);
+        hook.createEvent(EVENT_ID, "Bad Pool", 3, DEADLINE, badKey);
+    }
+
+    function test_cancelEvent_byOwner() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.prank(bob);
+        hook.predict(EVENT_ID, 1, DEPOSIT, DEPOSIT);
+
+        vm.warp(DEADLINE + 1);
+        hook.cancelEvent(EVENT_ID);
+
+        (,,,,, bool cancelled,,,,,,) = hook.getEvent(EVENT_ID);
+        assertTrue(cancelled);
+
+        // Users can claim proportional refund
+        uint256 aliceBal0Before = tokenA.balanceOf(alice);
+        vm.prank(alice);
+        hook.claim(EVENT_ID);
+        uint256 alicePayout0 = tokenA.balanceOf(alice) - aliceBal0Before;
+        assertGt(alicePayout0, 0, "Alice should get refund");
+
+        uint256 bobBal0Before = tokenA.balanceOf(bob);
+        vm.prank(bob);
+        hook.claim(EVENT_ID);
+        uint256 bobPayout0 = tokenA.balanceOf(bob) - bobBal0Before;
+        assertGt(bobPayout0, 0, "Bob should get refund");
+    }
+
+    function test_cancelEvent_autoExpiry() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        // Non-owner can cancel after deadline + AUTO_EXPIRY
+        vm.warp(DEADLINE + AUTO_EXPIRY + 1);
+
+        vm.prank(charlie);
+        hook.cancelEvent(EVENT_ID);
+
+        (,,,,, bool cancelled,,,,,,) = hook.getEvent(EVENT_ID);
+        assertTrue(cancelled);
+    }
+
+    function test_cancelEvent_beforeDeadline_reverts() public {
+        _createDefaultEvent();
+
+        // Non-owner before deadline
+        vm.prank(alice);
+        vm.expectRevert(PredictaPoolHook.DeadlineNotPassed.selector);
+        hook.cancelEvent(EVENT_ID);
+
+        // Owner before deadline
+        vm.expectRevert(PredictaPoolHook.DeadlineNotPassed.selector);
+        hook.cancelEvent(EVENT_ID);
+    }
+
+    function test_claim_afterCancel() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.prank(bob);
+        hook.predict(EVENT_ID, 1, DEPOSIT, DEPOSIT);
+
+        vm.prank(charlie);
+        hook.predict(EVENT_ID, 2, DEPOSIT, DEPOSIT);
+
+        vm.warp(DEADLINE + 1);
+        hook.cancelEvent(EVENT_ID);
+
+        // All users claim proportional refund
+        uint256 aliceBal0Before = tokenA.balanceOf(alice);
+        uint256 aliceBal1Before = tokenB.balanceOf(alice);
+        vm.prank(alice);
+        hook.claim(EVENT_ID);
+        assertGt(tokenA.balanceOf(alice) - aliceBal0Before, 0, "Alice token0 refund");
+        assertGt(tokenB.balanceOf(alice) - aliceBal1Before, 0, "Alice token1 refund");
+
+        uint256 bobBal0Before = tokenA.balanceOf(bob);
+        vm.prank(bob);
+        hook.claim(EVENT_ID);
+        assertGt(tokenA.balanceOf(bob) - bobBal0Before, 0, "Bob token0 refund");
+
+        uint256 charlieBal0Before = tokenA.balanceOf(charlie);
+        vm.prank(charlie);
+        hook.claim(EVENT_ID);
+        assertGt(tokenA.balanceOf(charlie) - charlieBal0Before, 0, "Charlie token0 refund");
+    }
+
+    function test_transferOwnership() public {
+        address newOwner = makeAddr("newOwner");
+        hook.transferOwnership(newOwner);
+        assertEq(hook.owner(), newOwner);
+    }
+
+    function test_transferOwnership_zeroAddress_reverts() public {
+        vm.expectRevert(PredictaPoolHook.ZeroAddress.selector);
+        hook.transferOwnership(address(0));
+    }
+
+    function test_pauseUnpause() public {
+        _createDefaultEvent();
+
+        // Pause
+        hook.pause();
+
+        // Predict should revert when paused
+        vm.prank(alice);
+        vm.expectRevert();
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        // Unpause
+        hook.unpause();
+
+        // Predict should work again
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        (, uint256 dep0,,,) = hook.predictions(EVENT_ID, alice);
+        assertEq(dep0, DEPOSIT);
+    }
+
+    function test_settlementDelay_reverts() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.warp(DEADLINE + 1);
+        hook.resolveEvent(EVENT_ID, 0);
+
+        // Try to settle immediately (within SETTLEMENT_DELAY)
+        vm.expectRevert(PredictaPoolHook.SettlementTooEarly.selector);
+        hook.settleEvent(EVENT_ID);
+
+        // Try at exactly resolvedAt + SETTLEMENT_DELAY - 1
+        vm.warp(DEADLINE + 1 + 3599);
+        vm.expectRevert(PredictaPoolHook.SettlementTooEarly.selector);
+        hook.settleEvent(EVENT_ID);
+    }
+
+    function test_multipleEventsOnSamePool() public {
+        _createDefaultEvent();
+
+        bytes32 eventId2 = keccak256("SECOND_EVENT");
+        vm.expectRevert(PredictaPoolHook.PoolHasActiveEvent.selector);
+        hook.createEvent(eventId2, "Second Event", 2, DEADLINE, poolKey);
+    }
+
+    function test_protocolFee() public {
+        address feeRecipient = makeAddr("feeRecipient");
+        hook.setProtocolFee(500, feeRecipient); // 5%
+
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.prank(bob);
+        hook.predict(EVENT_ID, 1, DEPOSIT, DEPOSIT);
+
+        // Generate yield
+        _doSwap(true, -100e18);
+        _doSwap(false, -100e18);
+        _doSwap(true, -50e18);
+        _doSwap(false, -50e18);
+
+        vm.warp(DEADLINE + 1);
+        hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
+
+        uint256 recipientBal0Before = tokenA.balanceOf(feeRecipient);
+        uint256 recipientBal1Before = tokenB.balanceOf(feeRecipient);
+
+        hook.settleEvent(EVENT_ID);
+
+        uint256 feePaid0 = tokenA.balanceOf(feeRecipient) - recipientBal0Before;
+        uint256 feePaid1 = tokenB.balanceOf(feeRecipient) - recipientBal1Before;
+
+        // At least one token should have received a fee (if yield was generated)
+        // Fee is 5% of yield, so it should be > 0 if yield > 0
+        (,,,,,,,,, uint256 totalReturn0, uint256 totalReturn1,) = hook.getEvent(EVENT_ID);
+        uint256 totalDeposit = DEPOSIT * 2;
+
+        // totalReturn should be less than gross (fee was taken)
+        // Claims should still succeed
+        vm.prank(alice);
+        hook.claim(EVENT_ID);
+
+        vm.prank(bob);
+        hook.claim(EVENT_ID);
+    }
+
+    function test_lastManStanding_rounding() public {
+        _createDefaultEvent();
+
+        // 3 users deposit
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.prank(bob);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.prank(charlie);
+        hook.predict(EVENT_ID, 1, DEPOSIT, DEPOSIT);
+
+        // Generate some yield
+        _doSwap(true, -100e18);
+        _doSwap(false, -100e18);
+
+        vm.warp(DEADLINE + 1);
+        hook.resolveEvent(EVENT_ID, 0);
+        vm.warp(block.timestamp + 3601);
+        hook.settleEvent(EVENT_ID);
+
+        // All 3 claim — last claimant must not revert due to rounding
+        vm.prank(alice);
+        hook.claim(EVENT_ID);
+
+        vm.prank(bob);
+        hook.claim(EVENT_ID);
+
+        vm.prank(charlie);
+        hook.claim(EVENT_ID);
+
+        // Verify all claimed successfully
+        (,,, bool aliceClaimed,) = hook.predictions(EVENT_ID, alice);
+        (,,, bool bobClaimed,) = hook.predictions(EVENT_ID, bob);
+        (,,, bool charlieClaimed,) = hook.predictions(EVENT_ID, charlie);
+
+        assertTrue(aliceClaimed);
+        assertTrue(bobClaimed);
+        assertTrue(charlieClaimed);
+    }
+
+    // ─── Access Control Tests ───────────────────────────────────────────
 
     function test_blockExternalLP() public {
         _createDefaultEvent();

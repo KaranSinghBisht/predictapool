@@ -55,11 +55,11 @@ PredictaPool is a Uniswap V4 Hook that creates **principal-protected prediction 
 
 | Contract | Address |
 |----------|---------|
-| PredictaPoolHook | [`0x670a7A315fcfeE9D29E264DC37f60D2b7CfACa40`](https://www.oklink.com/xlayer-test/address/0x670a7A315fcfeE9D29E264DC37f60D2b7CfACa40) |
-| Token 0 (ppUSDC) | [`0x1af558Ba6fDfdDDF7C971708572669578bfB4368`](https://www.oklink.com/xlayer-test/address/0x1af558Ba6fDfdDDF7C971708572669578bfB4368) |
-| Token 1 (ppWETH) | [`0x356d9E5e2a9EBBf67E9731de36bA1d333761b9fA`](https://www.oklink.com/xlayer-test/address/0x356d9E5e2a9EBBf67E9731de36bA1d333761b9fA) |
-| V4 PoolManager | [`0xa8e3463eF7934C7F8B18f77eBF1A6b49afA4932b`](https://www.oklink.com/xlayer-test/address/0xa8e3463eF7934C7F8B18f77eBF1A6b49afA4932b) |
-| SwapRouter | [`0xB920A2A12d24A555c3c74802Ff8a9DdF41EeB5e9`](https://www.oklink.com/xlayer-test/address/0xB920A2A12d24A555c3c74802Ff8a9DdF41EeB5e9) |
+| PredictaPoolHook | [`0x88dCC9995D81cBd0C54598B3C6048894E0308a40`](https://www.oklink.com/xlayer-test/address/0x88dCC9995D81cBd0C54598B3C6048894E0308a40) |
+| Token 0 (ppUSDC) | [`0x6711b09235DdA76f2A71d005C4fde76566CBE185`](https://www.oklink.com/xlayer-test/address/0x6711b09235DdA76f2A71d005C4fde76566CBE185) |
+| Token 1 (ppWETH) | [`0xEe8dDA62A3F837a40dd1889a50aDF57bf0b30B57`](https://www.oklink.com/xlayer-test/address/0xEe8dDA62A3F837a40dd1889a50aDF57bf0b30B57) |
+| V4 PoolManager | [`0xdC53623F92AD1959c4F257b57900cd11C056926d`](https://www.oklink.com/xlayer-test/address/0xdC53623F92AD1959c4F257b57900cd11C056926d) |
+| SwapRouter | [`0x8a4F428060133c22d6d69aD7102A82548fa8318B`](https://www.oklink.com/xlayer-test/address/0x8a4F428060133c22d6d69aD7102A82548fa8318B) |
 
 ## Quick Start
 
