@@ -579,11 +579,7 @@ contract PredictaPoolHookTest is Test {
 
     function test_createEvent_invalidPoolKey_reverts() public {
         PoolKey memory badKey = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: 3000,
-            tickSpacing: 60,
-            hooks: IHooks(address(0xdead))
+            currency0: currency0, currency1: currency1, fee: 3000, tickSpacing: 60, hooks: IHooks(address(0xdead))
         });
 
         vm.expectRevert(PredictaPoolHook.InvalidPoolKey.selector);
