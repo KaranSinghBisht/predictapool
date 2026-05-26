@@ -11,7 +11,7 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 - **Predict** a FIFA World Cup outcome (or any event)
 - **Earn** real swap fees as your deposit becomes Uniswap V4 liquidity
 - **Win** and receive boosted yield from the entire pool
-- **Lose** and get your principal back — you risk only yield, not principal (for volatile pairs, impermanent loss can reduce returns below deposit; for stablecoin pairs this risk is minimal)
+- **Lose** and get your principal back — principal-targeted for stable pairs; volatile pairs are exposed to impermanent loss
 
 ### How it works
 
@@ -22,7 +22,7 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 3. EARN            Traders swap in the pool, generating fees for LPs
 4. RESOLVE         Oracle reports the match result
 5. CLAIM           Winners: principal + ALL earned fees
-                   Losers:  principal returned (principal-protected)
+                   Losers:  principal returned (IL-exposed on volatile pairs)
 ```
 
 ### Why not Polymarket?
@@ -53,7 +53,12 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 
 ## Social
 
-Follow the build journey: [@PredictaPool](https://x.com/PredictaPool)
+Follow the build journey: [@PredictaPool](https://x.com/PredictaPool) | Tags: @XLayerOfficial @Uniswap @flapdotsh
+
+Build-in-public posts:
+- [Day 1: Introducing PredictaPool](https://x.com/PredictaPool) — launch announcement
+- [Day 2: How It Works](https://x.com/PredictaPool) — Hook callbacks deep dive
+- [Day 3: Smart Deposit Refunds](https://x.com/PredictaPool) — BalanceDelta refund mechanism
 
 ## Deployed Contracts (X Layer Testnet - Chain 1952)
 
@@ -121,11 +126,15 @@ Every step of the prediction lifecycle is verifiable on [X Layer Testnet Explore
 
 | Step | Transaction |
 |------|-------------|
-| Deploy Hook + Pool + Tokens | [`0x4ec8a6...`](https://www.oklink.com/xlayer-test/tx/0x4ec8a66e52228519b39eb7a9a3e974c03af9cf4d85945bfa88093841c09e1eb4) |
-| Predict (Argentina) + Swaps | [`0x89dbb6...`](https://www.oklink.com/xlayer-test/tx/0x89dbb6444a47fe769ec899c671f33f1befbbd92664925ce8f3ae3fd08d753a4c) |
-| Create Demo Event | [`0xb45306...`](https://www.oklink.com/xlayer-test/tx/0xb45306707046e8d0016ec2881a8ed46bcd185f69ca9a89aad1ab8dbaf34e1842) |
-| Resolve Demo Event | [`0x7cc834...`](https://www.oklink.com/xlayer-test/tx/0x7cc834d41e4f4c97d69a8aa6c70ed940078a5297917f46ca0d91e46f4fb0169a) |
-| Settle + Claim Demo Event | [`0xa7007c...`](https://www.oklink.com/xlayer-test/tx/0xa7007c6d027033938b828dedd880bc80c94f4bf10d1392c77844fb07addc223d) |
+| Create Event (live) | [`0xcd3e7e...`](https://www.oklink.com/xlayer-test/tx/0xcd3e7ec24f0a5219bcdbbef097c8bb1c1039effeecdfe828c0934fcd953c64ca) |
+| Predict (Argentina wins) | [`0x15e4b2...`](https://www.oklink.com/xlayer-test/tx/0x15e4b26d7c240be40eb6c53b68e58da1fb84ae1e784a74f7daa80a46e46a22e9) |
+| Swap (token0 → token1) | [`0xca7ed2...`](https://www.oklink.com/xlayer-test/tx/0xca7ed2eb54c7edc3aa96fb0cf7650b2f9313da79e3558868659798a0dc0b478d) |
+| Swap (token1 → token0) | [`0x5df568...`](https://www.oklink.com/xlayer-test/tx/0x5df568facd1d005b87590e5c4d25fdf3271519bed0bb09335cd59d282a1fafc8) |
+| Create Demo Event | [`0x8b4854...`](https://www.oklink.com/xlayer-test/tx/0x8b485445f2d64b9a69599dde8efda8cb7f5d01354341dbe56e1630802f7ac0df) |
+| Demo Predict | [`0xa94003...`](https://www.oklink.com/xlayer-test/tx/0xa94003fd928e3917d0f3c81c87ba64a523ad1ef6d7f83898a69b1f495473b1a7) |
+| Resolve Demo | [`0x7cc834...`](https://www.oklink.com/xlayer-test/tx/0x7cc834d41e4f4c97d69a8aa6c70ed940078a5297917f46ca0d91e46f4fb0169a) |
+| Settle Demo | [`0xa7007c...`](https://www.oklink.com/xlayer-test/tx/0xa7007c6d027033938b828dedd880bc80c94f4bf10d1392c77844fb07addc223d) |
+| Claim Demo | [`0xb78bba...`](https://www.oklink.com/xlayer-test/tx/0xb78bbad738a1f4cefa9bb05812a662a4b6dbffff8d9161d26d2a9c20d7221449) |
 
 **Note:** X Layer testnet does not have an official Uniswap V4 deployment, so we deploy our own PoolManager. The Hook contract, pool initialization, and all callback behavior are identical to what would run against the official V4 PoolManager.
 
