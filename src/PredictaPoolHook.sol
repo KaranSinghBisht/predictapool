@@ -52,6 +52,7 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
     // ─── Events ─────────────────────────────────────────────────────────
 
     event Claimed(bytes32 indexed eventId, address indexed user, uint256 payout0, uint256 payout1, bool isWinner);
+    event DepositRefunded(bytes32 indexed eventId, address indexed user, uint256 refund0, uint256 refund1);
     event EventCancelled(bytes32 indexed eventId);
     event EventCreated(bytes32 indexed eventId, string name, uint8 numOutcomes, uint256 deadline);
     event EventResolved(bytes32 indexed eventId, uint8 winningOutcome);
@@ -240,13 +241,13 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         PredictionEvent storage evt = _events[eventId];
         if (!evt.exists) revert EventNotFound();
         if (evt.settled || evt.cancelled) revert EventAlreadySettled();
+        if (evt.resolved) revert EventAlreadyResolved();
 
         bool isOwner = msg.sender == owner;
         if (isOwner) {
             if (block.timestamp <= evt.deadline) revert DeadlineNotPassed();
         } else {
             if (block.timestamp <= evt.deadline + AUTO_EXPIRY) revert DeadlineNotPassed();
-            if (evt.resolved) revert EventAlreadyResolved();
         }
 
         if (evt.totalLiquidity > 0) {
@@ -298,25 +299,37 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         uint256 actual1 = IERC20(token1).balanceOf(address(this)) - bal1Before;
 
         bytes memory result = poolManager.unlock(abi.encode(ACTION_ADD_LIQUIDITY, eventId, actual0, actual1));
-        uint128 liquidityAdded = abi.decode(result, (uint128));
+        (uint128 liquidityAdded, uint256 used0, uint256 used1) = abi.decode(result, (uint128, uint256, uint256));
 
-        evt.totalDeposit0 += actual0;
-        evt.totalDeposit1 += actual1;
+        uint256 refund0 = actual0 - used0;
+        uint256 refund1 = actual1 - used1;
+        if (refund0 > 0) {
+            IERC20(token0).safeTransfer(msg.sender, refund0);
+        }
+        if (refund1 > 0) {
+            IERC20(token1).safeTransfer(msg.sender, refund1);
+        }
+
+        evt.totalDeposit0 += used0;
+        evt.totalDeposit1 += used1;
         evt.totalLiquidity += liquidityAdded;
 
         if (pred.exists) {
-            pred.deposit0 += actual0;
-            pred.deposit1 += actual1;
+            pred.deposit0 += used0;
+            pred.deposit1 += used1;
         } else {
             predictions[eventId][msg.sender] =
-                UserPrediction({outcome: outcome, deposit0: actual0, deposit1: actual1, claimed: false, exists: true});
+                UserPrediction({outcome: outcome, deposit0: used0, deposit1: used1, claimed: false, exists: true});
             evt.totalPredictors++;
         }
 
-        depositsPerOutcome0[eventId][outcome] += actual0;
-        depositsPerOutcome1[eventId][outcome] += actual1;
+        depositsPerOutcome0[eventId][outcome] += used0;
+        depositsPerOutcome1[eventId][outcome] += used1;
 
-        emit PredictionMade(eventId, msg.sender, outcome, actual0, actual1);
+        emit PredictionMade(eventId, msg.sender, outcome, used0, used1);
+        if (refund0 > 0 || refund1 > 0) {
+            emit DepositRefunded(eventId, msg.sender, refund0, refund1);
+        }
     }
 
     function claim(bytes32 eventId) external nonReentrant {
@@ -549,7 +562,10 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
 
         _settleDelta(key, delta);
 
-        return abi.encode(liquidity);
+        uint256 used0 = delta.amount0() < 0 ? uint256(uint128(-delta.amount0())) : 0;
+        uint256 used1 = delta.amount1() < 0 ? uint256(uint128(-delta.amount1())) : 0;
+
+        return abi.encode(liquidity, used0, used1);
     }
 
     function _handleRemoveLiquidity(bytes32 eventId) internal returns (bytes memory) {

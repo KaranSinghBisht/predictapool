@@ -26,10 +26,14 @@
     .btn-primary { background: linear-gradient(135deg, #00d4ff 0%, #00bce6 100%); }
     .btn-primary:hover { filter: brightness(1.1); }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.3); }
+    .btn-secondary:hover { background: rgba(0, 212, 255, 0.2); }
     .outcome-btn { transition: all 0.2s; }
     .outcome-btn.selected { border-color: #00d4ff; background: rgba(0, 212, 255, 0.15); }
     .pulse { animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    a.tx-link { color: #00d4ff; text-decoration: underline; }
+    a.tx-link:hover { color: #00bce6; }
   </style>
 </head>
 <body class="text-white min-h-screen">
@@ -40,9 +44,11 @@
       <div class="w-8 h-8 rounded-full bg-cyan-400/20 flex items-center justify-center text-cyan-400 text-lg">P</div>
       <span class="text-xl font-bold">PredictaPool</span>
     </div>
-    <button id="connectBtn" onclick="connectWallet()" class="btn-primary px-5 py-2 rounded-lg font-semibold text-navy-900 text-sm">
-      Connect Wallet
-    </button>
+    <div class="flex items-center gap-3">
+      <button id="connectBtn" onclick="connectWallet()" class="btn-primary px-5 py-2 rounded-lg font-semibold text-navy-900 text-sm">
+        Connect Wallet
+      </button>
+    </div>
   </nav>
 
   <!-- Hero -->
@@ -77,8 +83,35 @@
       <div class="card rounded-xl p-6 text-center">
         <div class="text-3xl mb-3">3</div>
         <h3 class="font-semibold mb-2 text-cyan-400">Claim Winnings</h3>
-        <p class="text-gray-400 text-sm">Winners get principal + ALL yield. Losers get principal back. You only risk yield, never your deposit.</p>
+        <p class="text-gray-400 text-sm">Winners get principal + ALL yield. Losers get principal back. You risk only yield, not principal (subject to IL on volatile pairs).</p>
       </div>
+    </div>
+  </section>
+
+  <!-- Wallet Balances + Faucet -->
+  <section class="px-6 pb-6 max-w-4xl mx-auto" id="walletSection" style="display:none">
+    <div class="card rounded-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">Your Wallet</h3>
+        <button onclick="mintDemoTokens()" class="btn-secondary px-4 py-2 rounded-lg text-cyan-400 text-sm font-semibold">
+          Mint Demo Tokens
+        </button>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-navy-900/50 rounded-lg p-3">
+          <div class="text-xs text-gray-500">ppUSDC</div>
+          <div class="text-lg font-semibold" id="bal0">0.00</div>
+        </div>
+        <div class="bg-navy-900/50 rounded-lg p-3">
+          <div class="text-xs text-gray-500">ppWETH</div>
+          <div class="text-lg font-semibold" id="bal1">0.00</div>
+        </div>
+        <div class="bg-navy-900/50 rounded-lg p-3">
+          <div class="text-xs text-gray-500">OKB (gas)</div>
+          <div class="text-lg font-semibold" id="balNative">0.00</div>
+        </div>
+      </div>
+      <div id="mintStatus" class="text-sm text-center mt-3 text-gray-500"></div>
     </div>
   </section>
 
@@ -97,11 +130,11 @@
       <!-- Stats -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-navy-900/50 rounded-lg p-3">
-          <div class="text-xs text-gray-500">Total Pool (Token0)</div>
+          <div class="text-xs text-gray-500">Pool (ppUSDC)</div>
           <div class="text-lg font-semibold" id="totalDeposit0">0</div>
         </div>
         <div class="bg-navy-900/50 rounded-lg p-3">
-          <div class="text-xs text-gray-500">Total Pool (Token1)</div>
+          <div class="text-xs text-gray-500">Pool (ppWETH)</div>
           <div class="text-lg font-semibold" id="totalDeposit1">0</div>
         </div>
         <div class="bg-navy-900/50 rounded-lg p-3">
@@ -144,7 +177,7 @@
             class="flex-1 bg-navy-900/50 border border-cyan-400/20 rounded-lg px-4 py-3 text-white focus:border-cyan-400 focus:outline-none">
           <span class="flex items-center text-gray-500 text-sm">tokens</span>
         </div>
-        <div class="text-xs text-gray-500 mt-2">Min deposit: 0.001 tokens per side. You deposit equal amounts of both pool tokens.</div>
+        <div class="text-xs text-gray-500 mt-2">Min deposit: 0.001 tokens per side. You deposit equal amounts of ppUSDC and ppWETH. Unused tokens are refunded automatically.</div>
       </div>
 
       <!-- Action Buttons -->
@@ -172,11 +205,11 @@
           <div class="text-lg font-semibold text-cyan-400" id="userOutcome">--</div>
         </div>
         <div>
-          <div class="text-xs text-gray-500">Deposit (Token0)</div>
+          <div class="text-xs text-gray-500">Deposit (ppUSDC)</div>
           <div class="text-lg font-semibold" id="userDeposit0">0</div>
         </div>
         <div>
-          <div class="text-xs text-gray-500">Deposit (Token1)</div>
+          <div class="text-xs text-gray-500">Deposit (ppWETH)</div>
           <div class="text-lg font-semibold" id="userDeposit1">0</div>
         </div>
         <div>
@@ -194,23 +227,24 @@
   <!-- Footer -->
   <footer class="border-t border-cyan-400/10 px-6 py-8 text-center text-gray-600 text-sm">
     <p>PredictaPool — Built for <a href="https://web3.okx.com/xlayer/build-x-hackathon/hook" class="text-cyan-400/60 hover:text-cyan-400" target="_blank">#HookTheFuture</a> Hackathon</p>
-    <p class="mt-1">Uniswap V4 Hook on X Layer | <a href="https://github.com/KaranSinghBisht/predictapool" class="text-cyan-400/60 hover:text-cyan-400" target="_blank">GitHub</a></p>
+    <p class="mt-1">Uniswap V4 Hook on X Layer | <a href="https://github.com/KaranSinghBisht/predictapool" class="text-cyan-400/60 hover:text-cyan-400" target="_blank">GitHub</a> | <a href="https://x.com/PredictaPool" class="text-cyan-400/60 hover:text-cyan-400" target="_blank">@PredictaPool</a></p>
     <div class="mt-3 flex justify-center gap-4 text-xs text-gray-600">
-      <span>Hook: 0x88dC...0a40</span>
+      <a href="https://www.oklink.com/xlayer-test/address/0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40" target="_blank" class="hover:text-cyan-400">Hook: 0xcc42...8A40</a>
       <span>Chain: X Layer Testnet (1952)</span>
     </div>
   </footer>
 
   <script>
+    const EXPLORER = "https://www.oklink.com/xlayer-test";
     const ADDRESSES = {
-      hook: "0x88dCC9995D81cBd0C54598B3C6048894E0308a40",
-      token0: "0x6711b09235DdA76f2A71d005C4fde76566CBE185",
-      token1: "0xEe8dDA62A3F837a40dd1889a50aDF57bf0b30B57",
+      hook: "0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40",
+      token0: "0x573b5717Ff7e1C70573234Dc68aa064f70AbfeF6",
+      token1: "0x71642C9FeB621D9A5d536d7A255C573c16C6Fd12",
     };
 
     const EVENT_ID = "0x7e62176d34f6ec0157e28f14dc9d431dfedc1dff4cfe9fab73c5c259186e8864";
     const OUTCOMES = ["Argentina Win", "Draw", "Brazil Win"];
-    const XLAYER_CHAIN_ID = "0x7A0"; // 1952
+    const XLAYER_CHAIN_ID = "0x7A0";
 
     const HOOK_ABI = [
       "function getEvent(bytes32) view returns (string,uint8,uint8,bool,bool,bool,uint256,uint256,uint256,uint256,uint256,uint256)",
@@ -224,7 +258,8 @@
       "function approve(address,uint256) returns (bool)",
       "function allowance(address,address) view returns (uint256)",
       "function balanceOf(address) view returns (uint256)",
-      "function symbol() view returns (string)"
+      "function symbol() view returns (string)",
+      "function mint(address,uint256)"
     ];
 
     let provider, signer, hookContract, token0Contract, token1Contract;
@@ -234,6 +269,29 @@
     const RPC = "https://testrpc.xlayer.tech";
     const readProvider = new ethers.JsonRpcProvider(RPC);
     const readHook = new ethers.Contract(ADDRESSES.hook, HOOK_ABI, readProvider);
+
+    function makeTxLink(hash) {
+      const a = document.createElement("a");
+      a.href = EXPLORER + "/tx/" + hash;
+      a.target = "_blank";
+      a.className = "tx-link";
+      a.textContent = hash.slice(0, 10) + "...";
+      return a;
+    }
+
+    function setStatusWithTx(msg, hash) {
+      const el = document.getElementById("txStatus");
+      el.textContent = "";
+      el.appendChild(document.createTextNode(msg + " "));
+      if (hash) el.appendChild(makeTxLink(hash));
+    }
+
+    function setMintStatusWithTx(msg, hash) {
+      const el = document.getElementById("mintStatus");
+      el.textContent = "";
+      el.appendChild(document.createTextNode(msg + " "));
+      if (hash) el.appendChild(makeTxLink(hash));
+    }
 
     async function connectWallet() {
       if (!window.ethereum) { alert("Please install MetaMask"); return; }
@@ -254,7 +312,7 @@
                 chainName: "X Layer Testnet",
                 nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
                 rpcUrls: [RPC],
-                blockExplorerUrls: ["https://www.oklink.com/xlayer-test"]
+                blockExplorerUrls: [EXPLORER]
               }]
             });
           }
@@ -270,12 +328,54 @@
 
         document.getElementById("connectBtn").textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
         document.getElementById("approveBtn").disabled = false;
-        document.getElementById("predictBtn").disabled = false;
+        document.getElementById("walletSection").style.display = "block";
 
+        window.ethereum.on("accountsChanged", () => window.location.reload());
+        window.ethereum.on("chainChanged", () => window.location.reload());
+
+        await loadBalances();
         await loadUserPosition();
       } catch (err) {
-        console.error(err);
         setStatus("Connection failed: " + err.message);
+      }
+    }
+
+    async function loadBalances() {
+      if (!userAddress) return;
+      try {
+        const readToken0 = new ethers.Contract(ADDRESSES.token0, ERC20_ABI, readProvider);
+        const readToken1 = new ethers.Contract(ADDRESSES.token1, ERC20_ABI, readProvider);
+        const [b0, b1, bNative] = await Promise.all([
+          readToken0.balanceOf(userAddress),
+          readToken1.balanceOf(userAddress),
+          readProvider.getBalance(userAddress)
+        ]);
+        document.getElementById("bal0").textContent = parseFloat(ethers.formatEther(b0)).toFixed(2);
+        document.getElementById("bal1").textContent = parseFloat(ethers.formatEther(b1)).toFixed(2);
+        document.getElementById("balNative").textContent = parseFloat(ethers.formatEther(bNative)).toFixed(4);
+      } catch (err) {
+        /* ignore balance load errors */
+      }
+    }
+
+    async function mintDemoTokens() {
+      if (!signer) { alert("Connect wallet first"); return; }
+      const mintAmount = ethers.parseEther("10000");
+      try {
+        setMintStatus("Minting 10,000 ppUSDC...");
+        const tx0 = await token0Contract.mint(userAddress, mintAmount);
+        setMintStatusWithTx("Waiting...", tx0.hash);
+        await tx0.wait();
+
+        setMintStatus("Minting 10,000 ppWETH...");
+        const tx1 = await token1Contract.mint(userAddress, mintAmount);
+        setMintStatusWithTx("Waiting...", tx1.hash);
+        await tx1.wait();
+
+        setMintStatus("Minted 10,000 of each token!");
+        await loadBalances();
+      } catch (err) {
+        setMintStatus("Mint failed: " + err.message);
       }
     }
 
@@ -284,22 +384,31 @@
       for (let i = 0; i < 3; i++) {
         document.getElementById("outcome-" + i).classList.toggle("selected", i === idx);
       }
+      if (signer) document.getElementById("predictBtn").disabled = false;
     }
 
     async function approveTokens() {
       if (!signer) { alert("Connect wallet first"); return; }
+      const btn = document.getElementById("approveBtn");
+      btn.disabled = true;
+      const amount = document.getElementById("depositAmount").value;
+      const approveAmount = amount && parseFloat(amount) > 0
+        ? ethers.parseEther(amount)
+        : ethers.parseEther("10000");
       try {
-        setStatus("Approving tokens...");
-        const max = ethers.MaxUint256;
-        const tx0 = await token0Contract.approve(ADDRESSES.hook, max);
-        setStatus("Approving token0... tx: " + tx0.hash.slice(0, 10));
+        setStatus("Approving ppUSDC...");
+        const tx0 = await token0Contract.approve(ADDRESSES.hook, approveAmount);
+        setStatusWithTx("Approving ppUSDC...", tx0.hash);
         await tx0.wait();
-        const tx1 = await token1Contract.approve(ADDRESSES.hook, max);
-        setStatus("Approving token1... tx: " + tx1.hash.slice(0, 10));
+        setStatus("Approving ppWETH...");
+        const tx1 = await token1Contract.approve(ADDRESSES.hook, approveAmount);
+        setStatusWithTx("Approving ppWETH...", tx1.hash);
         await tx1.wait();
         setStatus("Both tokens approved!");
       } catch (err) {
         setStatus("Approval failed: " + err.message);
+      } finally {
+        btn.disabled = false;
       }
     }
 
@@ -310,31 +419,41 @@
       const amount = document.getElementById("depositAmount").value;
       if (!amount || parseFloat(amount) < 0.001) { alert("Min deposit is 0.001"); return; }
 
+      const btn = document.getElementById("predictBtn");
+      btn.disabled = true;
       try {
         const wei = ethers.parseEther(amount);
         setStatus("Submitting prediction...");
         const tx = await hookContract.predict(EVENT_ID, selectedOutcome, wei, wei);
-        setStatus("Tx submitted: " + tx.hash.slice(0, 10) + "... waiting for confirmation");
+        setStatusWithTx("Tx submitted, waiting...", tx.hash);
         await tx.wait();
-        setStatus("Prediction confirmed!");
+        setStatusWithTx("Prediction confirmed!", tx.hash);
         await loadEventData();
         await loadUserPosition();
+        await loadBalances();
       } catch (err) {
         setStatus("Prediction failed: " + (err.reason || err.message));
+      } finally {
+        btn.disabled = false;
       }
     }
 
     async function claimReward() {
       if (!signer) return;
+      const btn = document.getElementById("claimBtn");
+      btn.disabled = true;
       try {
         setStatus("Claiming payout...");
         const tx = await hookContract.claim(EVENT_ID);
-        setStatus("Tx submitted: " + tx.hash.slice(0, 10));
+        setStatusWithTx("Tx submitted...", tx.hash);
         await tx.wait();
-        setStatus("Payout claimed!");
+        setStatusWithTx("Payout claimed!", tx.hash);
         await loadUserPosition();
+        await loadBalances();
       } catch (err) {
         setStatus("Claim failed: " + (err.reason || err.message));
+      } finally {
+        btn.disabled = false;
       }
     }
 
@@ -350,7 +469,10 @@
         const now = Math.floor(Date.now() / 1000);
         const remaining = deadline - now;
 
-        if (evt[4]) {
+        if (evt[5]) {
+          document.getElementById("eventStatus").textContent = "Cancelled";
+          document.getElementById("eventStatus").className = "px-3 py-1 rounded-full text-sm bg-red-500/20 text-red-400";
+        } else if (evt[4]) {
           document.getElementById("eventStatus").textContent = "Settled";
           document.getElementById("eventStatus").className = "px-3 py-1 rounded-full text-sm bg-blue-500/20 text-blue-400";
         } else if (evt[3]) {
@@ -375,7 +497,7 @@
           } catch { }
         }
       } catch (err) {
-        console.error("Failed to load event:", err);
+        /* ignore load errors */
       }
     }
 
@@ -406,12 +528,15 @@
           }
         }
       } catch (err) {
-        console.error("Failed to load position:", err);
+        /* ignore position load errors */
       }
     }
 
     function setStatus(msg) {
       document.getElementById("txStatus").textContent = msg;
+    }
+    function setMintStatus(msg) {
+      document.getElementById("mintStatus").textContent = msg;
     }
 
     loadEventData();

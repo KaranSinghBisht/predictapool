@@ -95,20 +95,27 @@ contract PredictaPoolHookFuzzTest is Test {
 
         _createDefaultEvent();
 
+        uint256 bal0Before = tokenA.balanceOf(alice);
+        uint256 bal1Before = tokenB.balanceOf(alice);
+
         vm.prank(alice);
         hook.predict(EVENT_ID, 0, amount0, amount1);
 
         (uint8 outcome, uint256 dep0, uint256 dep1, bool claimed, bool exists) = hook.predictions(EVENT_ID, alice);
 
         assertEq(outcome, 0);
-        assertEq(dep0, amount0);
-        assertEq(dep1, amount1);
+        assertLe(dep0, amount0);
+        assertLe(dep1, amount1);
+        assertTrue(dep0 > 0 || dep1 > 0);
         assertFalse(claimed);
         assertTrue(exists);
 
+        assertEq(tokenA.balanceOf(alice), bal0Before - dep0);
+        assertEq(tokenB.balanceOf(alice), bal1Before - dep1);
+
         (,,,,,,, uint256 totalDeposit0, uint256 totalDeposit1,,,) = hook.getEvent(EVENT_ID);
-        assertEq(totalDeposit0, amount0);
-        assertEq(totalDeposit1, amount1);
+        assertEq(totalDeposit0, dep0);
+        assertEq(totalDeposit1, dep1);
     }
 
     function testFuzz_calculatePayout_conservation(uint256 dep1, uint256 dep2) public {

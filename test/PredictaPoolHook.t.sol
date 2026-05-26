@@ -501,15 +501,68 @@ contract PredictaPoolHookTest is Test {
         uint256 amount0 = 5_000e18;
         uint256 amount1 = MIN_DEPOSIT;
 
+        uint256 bal0Before = tokenA.balanceOf(alice);
+        uint256 bal1Before = tokenB.balanceOf(alice);
+
         vm.prank(alice);
         hook.predict(EVENT_ID, 0, amount0, amount1);
 
         (uint8 outcome, uint256 dep0, uint256 dep1, bool claimed, bool exists) = hook.predictions(EVENT_ID, alice);
         assertEq(outcome, 0);
-        assertEq(dep0, amount0);
-        assertEq(dep1, amount1);
+        assertLe(dep0, amount0);
+        assertLe(dep1, amount1);
         assertFalse(claimed);
         assertTrue(exists);
+
+        assertEq(tokenA.balanceOf(alice), bal0Before - dep0);
+        assertEq(tokenB.balanceOf(alice), bal1Before - dep1);
+    }
+
+    function test_predict_refundEvent_emitted() public {
+        _createDefaultEvent();
+
+        uint256 amount0 = 5_000e18;
+        uint256 amount1 = MIN_DEPOSIT;
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, false, false);
+        emit PredictaPoolHook.DepositRefunded(EVENT_ID, alice, 0, 0);
+        hook.predict(EVENT_ID, 0, amount0, amount1);
+    }
+
+    function test_predict_refundAfterPriceDrift() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        _doSwap(true, -2_000e18);
+
+        uint256 bal0Before = tokenA.balanceOf(bob);
+        uint256 bal1Before = tokenB.balanceOf(bob);
+
+        vm.prank(bob);
+        hook.predict(EVENT_ID, 1, DEPOSIT, DEPOSIT);
+
+        (, uint256 dep0, uint256 dep1,,) = hook.predictions(EVENT_ID, bob);
+
+        assertLe(dep0, DEPOSIT);
+        assertLe(dep1, DEPOSIT);
+        assertEq(tokenA.balanceOf(bob), bal0Before - dep0);
+        assertEq(tokenB.balanceOf(bob), bal1Before - dep1);
+    }
+
+    function test_cancelEvent_afterResolve_reverts() public {
+        _createDefaultEvent();
+
+        vm.prank(alice);
+        hook.predict(EVENT_ID, 0, DEPOSIT, DEPOSIT);
+
+        vm.warp(DEADLINE + 1);
+        hook.resolveEvent(EVENT_ID, 0);
+
+        vm.expectRevert(PredictaPoolHook.EventAlreadyResolved.selector);
+        hook.cancelEvent(EVENT_ID);
     }
 
     function test_predict_zeroAmount_reverts() public {

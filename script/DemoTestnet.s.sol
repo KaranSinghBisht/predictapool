@@ -13,10 +13,10 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {PredictaPoolHook} from "../src/PredictaPoolHook.sol";
 
 contract DemoTestnet is Script {
-    address constant HOOK = 0x88dCC9995D81cBd0C54598B3C6048894E0308a40;
-    address constant TOKEN0 = 0x6711b09235DdA76f2A71d005C4fde76566CBE185;
-    address constant TOKEN1 = 0xEe8dDA62A3F837a40dd1889a50aDF57bf0b30B57;
-    address constant SWAP_ROUTER = 0x8a4F428060133c22d6d69aD7102A82548fa8318B;
+    address constant HOOK = 0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40;
+    address constant TOKEN0 = 0x573b5717Ff7e1C70573234Dc68aa064f70AbfeF6;
+    address constant TOKEN1 = 0x71642C9FeB621D9A5d536d7A255C573c16C6Fd12;
+    address constant SWAP_ROUTER = 0x9836796875956DEF7CED74C758f9E04682Dfbe2e;
 
     function run() external {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
