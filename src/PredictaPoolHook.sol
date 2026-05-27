@@ -431,6 +431,8 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
 
     // ─── Hook Callbacks (used) ──────────────────────────────────────────
 
+    /// @notice Restricts liquidity additions to the Hook contract itself.
+    /// @dev Prevents external LPs from adding liquidity directly, which would dilute prediction pools.
     function beforeAddLiquidity(
         address sender,
         PoolKey calldata,
@@ -441,6 +443,8 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         return IHooks.beforeAddLiquidity.selector;
     }
 
+    /// @notice Restricts liquidity removal to the Hook contract itself.
+    /// @dev Protects depositor funds from being withdrawn externally before event settlement.
     function beforeRemoveLiquidity(
         address sender,
         PoolKey calldata,
@@ -451,6 +455,8 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         return IHooks.beforeRemoveLiquidity.selector;
     }
 
+    /// @notice Tracks swap activity per prediction event for yield analytics.
+    /// @dev Increments the event's swapCount so settlement can report yield-generating activity.
     function afterSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata, BalanceDelta, bytes calldata)
         external
         onlyPoolManager
@@ -495,6 +501,7 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         return (IHooks.afterRemoveLiquidity.selector, BalanceDelta.wrap(0));
     }
 
+    // Stub required by IHooks — not active (beforeSwap permission is false)
     function beforeSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, bytes calldata)
         external
         view
