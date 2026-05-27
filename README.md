@@ -51,6 +51,60 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 | `PredictaPoolHook.sol` | Core V4 Hook with prediction + yield redistribution |
 | `MockERC20.sol` | Test ERC20 tokens for deployment |
 
+## Technical Deep Dive
+
+### Why This Hook Design Works
+
+PredictaPool uses three V4 hook callbacks to create a fully on-chain prediction market where deposits become productive liquidity:
+
+**1. LP Access Control (`beforeAddLiquidity` / `beforeRemoveLiquidity`)**
+
+The hook enforces that only the contract itself can add or remove liquidity from the pool. External LPs are blocked. This prevents dilution of prediction deposits — every unit of liquidity in the pool comes from a predictor, ensuring yield attribution is exact.
+
+```
+beforeAddLiquidity:  if sender != address(this) → revert
+beforeRemoveLiquidity: if sender != address(this) → revert
+```
+
+**2. Yield Tracking (`afterSwap`)**
+
+Every swap in the underlying pool increments a per-event swap counter. This provides on-chain analytics for yield generation without storing individual fee amounts — the actual yield is computed at settlement by comparing total LP returns against total deposits.
+
+**3. Atomic LP via `unlockCallback`**
+
+The predict and settle flows use V4's unlock mechanism for atomic operations:
+
+```
+predict() → poolManager.unlock() → unlockCallback(ACTION_ADD_LIQUIDITY)
+  └→ getLiquidityForAmounts() → modifyLiquidity() → settleDelta()
+  └→ Refund unused tokens to predictor
+
+settleEvent() → poolManager.unlock() → unlockCallback(ACTION_REMOVE_LIQUIDITY)
+  └→ modifyLiquidity(negative) → takeDelta()
+  └→ Deduct protocol fee from yield → Record totalReturn
+```
+
+**4. Yield Redistribution (`claim`)**
+
+The claim algorithm separates principal from yield:
+
+- **Principal**: Distributed proportionally to ALL depositors (winners and losers) based on their share of total deposits. If IL caused returns < deposits, everyone shares the loss proportionally.
+- **Yield**: The surplus above principal goes exclusively to winners, proportional to their deposit in the winning outcome pool.
+- **No winners**: If nobody predicted correctly, yield is distributed proportionally to all depositors.
+- **Last claimer**: Gets the actual remaining balance, preventing dust from rounding errors.
+
+This design ensures losers always get their principal back (minus IL on volatile pairs), while winners capture all the yield generated during the prediction period.
+
+### Test Coverage
+
+82 tests covering the full contract surface:
+- Lifecycle: create → predict → swap → resolve → settle → claim
+- Protocol fees: deduction from yield, max fee cap, zero-fee mode
+- Cancellation: owner cancel, auto-expiry, proportional refunds
+- Edge cases: MIN_DEPOSIT, same-user stacking, no-winners distribution
+- Access control: pause/unpause, ownership transfer chains
+- Fuzz testing: random deposit ratios and swap sequences
+
 ## Social
 
 Follow the build journey: [@PredictaPool](https://x.com/PredictaPool) | Tags: @XLayerOfficial @Uniswap @flapdotsh
