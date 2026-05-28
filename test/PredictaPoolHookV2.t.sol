@@ -112,14 +112,8 @@ contract PredictaPoolHookV2Test is Test {
     }
 
     function _swapCount() internal view returns (uint256 swapCount) {
-        (
-            string memory name,
-            uint8 numOutcomes,,
-            bool resolved,
-            bool settled,,
-            uint256 deadline,,,,,
-            uint256 sc
-        ) = hook.getEvent(EVENT_ID);
+        (string memory name, uint8 numOutcomes,, bool resolved, bool settled,, uint256 deadline,,,,, uint256 sc) =
+            hook.getEvent(EVENT_ID);
         name;
         numOutcomes;
         resolved;

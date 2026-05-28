@@ -53,8 +53,7 @@ contract PredictaPoolHookFuzzTest is Test {
         currency0 = Currency.wrap(address(tokenA));
         currency1 = Currency.wrap(address(tokenB));
 
-        uint160 flags =
-        uint160(
+        uint160 flags = uint160(
             Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
                 | Hooks.AFTER_SWAP_FLAG
         );

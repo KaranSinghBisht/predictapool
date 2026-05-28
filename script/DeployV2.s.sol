@@ -74,13 +74,17 @@ contract DeployV2 is Script {
         PoolSwapTest.TestSettings memory ts = PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
         router.swap(
             poolKey,
-            IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -25e18, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1}),
+            IPoolManager.SwapParams({
+                zeroForOne: true, amountSpecified: -25e18, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
+            }),
             ts,
             ""
         );
         router.swap(
             poolKey,
-            IPoolManager.SwapParams({zeroForOne: false, amountSpecified: -25e18, sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1}),
+            IPoolManager.SwapParams({
+                zeroForOne: false, amountSpecified: -25e18, sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
+            }),
             ts,
             ""
         );
