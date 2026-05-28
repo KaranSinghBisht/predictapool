@@ -58,7 +58,10 @@ contract PredictaPoolHookTest is Test {
         currency1 = Currency.wrap(address(tokenB));
 
         uint160 flags =
-            uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | Hooks.AFTER_SWAP_FLAG);
+        uint160(
+            Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
+                | Hooks.AFTER_SWAP_FLAG
+        );
 
         (address hookAddr, bytes32 salt) =
             HookMiner.find(address(this), flags, type(PredictaPoolHook).creationCode, abi.encode(address(poolManager)));

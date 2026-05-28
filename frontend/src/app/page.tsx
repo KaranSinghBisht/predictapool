@@ -35,7 +35,7 @@ export default function Home() {
 
       {/* Verify on-chain — trust anchor right after the hero */}
       <div className="max-w-[1320px] mx-auto px-6 lg:px-[60px] py-14">
-        <ProofPanel pool={pool} swaps={swaps} />
+        <ProofPanel pool={pool} swaps={swaps} feePips={eventData?.feePips} />
       </div>
 
       <MarketsSection />

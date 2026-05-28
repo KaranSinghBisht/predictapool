@@ -40,9 +40,10 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 
 | Callback | Purpose |
 |----------|---------|
-| `beforeAddLiquidity` | Access control - only Hook can manage LP |
-| `beforeRemoveLiquidity` | Access control - only Hook can remove LP |
-| `afterSwap` | Track swap activity for yield analytics |
+| `beforeSwap` | **Governs every swap** — sets a deadline-aware dynamic fee and locks trading once the event resolves/settles/cancels |
+| `beforeAddLiquidity` | Access control — only the Hook can add LP |
+| `beforeRemoveLiquidity` | Access control — only the Hook can remove LP |
+| `afterSwap` | Emits per-swap yield telemetry (`YieldBoosted`) + swap count |
 
 ### Contracts
 
@@ -55,20 +56,26 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 
 ### Why This Hook Design Works
 
-PredictaPool uses three V4 hook callbacks to create a fully on-chain prediction market where deposits become productive liquidity:
+PredictaPool's hook **governs the swap itself** — the pool's economics and lifecycle are decided on-chain by the event state. This is what makes it a prediction market rather than a plain pool with a side-pot:
 
-**1. LP Access Control (`beforeAddLiquidity` / `beforeRemoveLiquidity`)**
+**1. Hook-driven dynamic fee + lifecycle gate (`beforeSwap`)** — the headline mechanic
 
-The hook enforces that only the contract itself can add or remove liquidity from the pool. External LPs are blocked. This prevents dilution of prediction deposits — every unit of liquidity in the pool comes from a predictor, ensuring yield attribution is exact.
+On a dynamic-fee pool, `beforeSwap` returns the LP fee for each swap, ramping linearly from 0.30% to 1.00% over the final 7 days before kickoff — so peak match hype funds a bigger prize. The same callback **closes trading** (reverts `TradingClosed`) once the event is resolved/settled/cancelled, binding the pool's life to the match. A plain pool cannot price swaps off event state or lock trading — only a hook sees `beforeSwap`.
+
+> Dynamic fees are a known V4 pattern; the novelty here is the *coupling* — fee schedule and trading lifecycle are driven by a live prediction event, and because the hook is the pool's only LP, 100% of the fee becomes prize yield via the existing `claim()` path.
 
 ```
-beforeAddLiquidity:  if sender != address(this) → revert
-beforeRemoveLiquidity: if sender != address(this) → revert
+beforeSwap: if resolved/settled/cancelled → revert TradingClosed
+            else fee = ramp(timeToDeadline)  // 0.30% → 1.00%, override flag set
 ```
 
-**2. Yield Tracking (`afterSwap`)**
+**2. LP Access Control (`beforeAddLiquidity` / `beforeRemoveLiquidity`)**
 
-Every swap in the underlying pool increments a per-event swap counter. This provides on-chain analytics for yield generation without storing individual fee amounts — the actual yield is computed at settlement by comparing total LP returns against total deposits.
+The hook enforces that only the contract itself can add or remove liquidity. External LPs are blocked, so every unit of liquidity comes from a predictor — yield attribution is exact.
+
+**3. Yield Telemetry (`afterSwap`)**
+
+Each swap increments a per-event counter and emits `YieldBoosted(eventId, swapper, feePips, swapCount)`, making the prize build-up verifiable on-chain per swap. Actual yield is realized at settlement by comparing total LP returns against deposits.
 
 **3. Atomic LP via `unlockCallback`**
 
@@ -97,8 +104,11 @@ This design ensures losers always get their principal back (minus IL on volatile
 
 ### Test Coverage
 
-82 tests covering the full contract surface:
+92 tests covering the full contract surface:
 - Lifecycle: create → predict → swap → resolve → settle → claim
+- Dynamic fee: base/ramp/peak schedule, swap fee override on dynamic pools
+- Lifecycle gate: swaps revert once resolved/settled/cancelled
+- Telemetry: `YieldBoosted` emission + swap count
 - Protocol fees: deduction from yield, max fee cap, zero-fee mode
 - Cancellation: owner cancel, auto-expiry, proportional refunds
 - Edge cases: MIN_DEPOSIT, same-user stacking, no-winners distribution
@@ -118,12 +128,14 @@ Build-in-public posts:
 
 | Contract | Address |
 |----------|---------|
-| PredictaPoolHook | [`0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40`](https://www.oklink.com/xlayer-test/address/0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40) |
+| PredictaPoolHook v2 (dynamic-fee, active) | [`0x26b7228e75c5Ba4f256aa88b7141290518D70Ac0`](https://www.oklink.com/xlayer-test/address/0x26b7228e75c5Ba4f256aa88b7141290518D70Ac0) |
+| PredictaPoolHook v1 (original) | [`0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40`](https://www.oklink.com/xlayer-test/address/0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40) |
 | Token 0 (ppUSDC) | [`0x573b5717Ff7e1C70573234Dc68aa064f70AbfeF6`](https://www.oklink.com/xlayer-test/address/0x573b5717Ff7e1C70573234Dc68aa064f70AbfeF6) |
 | Token 1 (ppWETH) | [`0x71642C9FeB621D9A5d536d7A255C573c16C6Fd12`](https://www.oklink.com/xlayer-test/address/0x71642C9FeB621D9A5d536d7A255C573c16C6Fd12) |
 | V4 PoolManager | [`0x640c8A28f81D7E7087AEec0d6A9D9efdA1694B92`](https://www.oklink.com/xlayer-test/address/0x640c8A28f81D7E7087AEec0d6A9D9efdA1694B92) |
 | SwapRouter | [`0x9836796875956DEF7CED74C758f9E04682Dfbe2e`](https://www.oklink.com/xlayer-test/address/0x9836796875956DEF7CED74C758f9E04682Dfbe2e) |
-| EventId (live) | `0x7e62176d34f6ec0157e28f14dc9d431dfedc1dff4cfe9fab73c5c259186e8864` |
+| EventId (live, v2 dynamic-fee) | `0x8e7d3d968700fe8f2e70bd7e29ab516930388419d00a6133a266bc504435a38b` |
+| EventId (v1, original) | `0x7e62176d34f6ec0157e28f14dc9d431dfedc1dff4cfe9fab73c5c259186e8864` |
 | EventId (demo, full lifecycle) | `0x3b1a30d71ca4dc87a0c9aa60aad7889d629dabd724b879101896d04c54eeb070` |
 
 ## Quick Start

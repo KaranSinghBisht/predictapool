@@ -203,6 +203,25 @@ export function EventCard({
         </div>
       </div>
 
+      {/* Hook-driven dynamic fee — the v2 hook prices every swap from event state */}
+      {isLive && eventData.feePips > 0 && (
+        <div
+          className="mx-6 mb-1 flex items-center justify-between rounded-xl px-4 py-2.5"
+          style={{
+            background: "rgba(0,212,255,0.06)",
+            border: "1px solid rgba(0,212,255,0.2)",
+          }}
+        >
+          <span className="font-data text-[11px] text-[#38e0ff] uppercase tracking-[0.1em]">
+            ⚡ Hook-driven fee
+          </span>
+          <span className="font-data text-[13px] text-[#e8eef5]">
+            {(eventData.feePips / 10000).toFixed(2)}%
+            <span className="text-[#6b7a8f]"> · ramps to 1.00% at kickoff</span>
+          </span>
+        </div>
+      )}
+
       {/* Outcomes */}
       <div className="px-6 pb-1 space-y-2.5">
         {OUTCOME_STYLES.map((o, i) => {

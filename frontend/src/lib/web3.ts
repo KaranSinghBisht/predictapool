@@ -70,6 +70,7 @@ export interface EventData {
   totalReturn0: bigint;
   totalReturn1: bigint;
   swapCount: number;
+  feePips: number;
 }
 
 type EventTuple = readonly [
@@ -91,9 +92,10 @@ export async function fetchEvent(): Promise<EventData> {
   // NOTE: `getEvent` is a reserved method on ethers v6 Contract (event lookup),
   // so we must call the ABI function explicitly via getFunction to avoid a
   // silent "no matching event" throw.
-  const evt = (await readHook
-    .getFunction("getEvent")
-    .staticCall(EVENT_ID)) as unknown as EventTuple;
+  const [evt, feePips] = (await Promise.all([
+    readHook.getFunction("getEvent").staticCall(EVENT_ID),
+    readHook.currentFeePips(EVENT_ID).catch(() => 0n),
+  ])) as unknown as [EventTuple, bigint];
   return {
     name: evt[0],
     numOutcomes: Number(evt[1]),
@@ -107,6 +109,7 @@ export async function fetchEvent(): Promise<EventData> {
     totalReturn0: evt[9],
     totalReturn1: evt[10],
     swapCount: Number(evt[11]),
+    feePips: Number(feePips),
   };
 }
 

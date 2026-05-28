@@ -329,7 +329,11 @@ export default function MarketDetailPage({
               </div>
 
               {/* On-chain proof — real, verifiable lifecycle */}
-              <ProofPanel pool={fmtEth(realPool)} swaps={realSwaps} />
+              <ProofPanel
+                pool={fmtEth(realPool)}
+                swaps={realSwaps}
+                feePips={ctx.eventData?.feePips}
+              />
             </div>
 
             {ctx.address && (

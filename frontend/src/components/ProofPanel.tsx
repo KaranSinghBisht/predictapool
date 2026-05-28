@@ -64,10 +64,17 @@ interface ProofPanelProps {
   pool?: string;
   /** Live on-chain swap count. */
   swaps?: number;
+  /** Live hook-driven fee in pips (1e6 = 100%). */
+  feePips?: number;
   className?: string;
 }
 
-export function ProofPanel({ pool, swaps, className }: ProofPanelProps) {
+export function ProofPanel({
+  pool,
+  swaps,
+  feePips,
+  className,
+}: ProofPanelProps) {
   const hasLive = pool !== undefined || swaps !== undefined;
 
   return (
@@ -104,16 +111,16 @@ export function ProofPanel({ pool, swaps, className }: ProofPanelProps) {
             X Layer Testnet · Chain 1952
           </span>
         </div>
-        <p className="text-sm text-[#b6c2d4] leading-relaxed max-w-[640px] mb-6">
-          Nothing here is mocked. Every contract and transaction below is
-          deployed and verifiable on the block explorer — addresses, the live
-          event, and the full prediction lifecycle.
+        <p className="text-sm text-[#b6c2d4] leading-relaxed max-w-[660px] mb-6">
+          Nothing here is mocked. The Uniswap V4 hook governs the live pool — it
+          sets a deadline-aware swap fee and locks trading at settlement. Every
+          contract and transaction below is verifiable on the block explorer.
         </p>
 
         {/* Live readout */}
         {hasLive && (
           <div
-            className="grid grid-cols-2 sm:grid-cols-3 rounded-xl overflow-hidden mb-6"
+            className="grid grid-cols-2 sm:grid-cols-4 rounded-xl overflow-hidden mb-6"
             style={{
               background: "rgba(0,0,0,0.3)",
               border: "1px solid rgba(232,238,245,0.08)",
@@ -122,10 +129,21 @@ export function ProofPanel({ pool, swaps, className }: ProofPanelProps) {
             <div className="border-r border-[rgba(232,238,245,0.08)]">
               <LiveStat label="Live Pool" value={pool ?? "—"} accent />
             </div>
-            <div className="sm:border-r border-[rgba(232,238,245,0.08)]">
+            <div className="border-r border-[rgba(232,238,245,0.08)]">
               <LiveStat
                 label="On-chain Swaps"
                 value={swaps !== undefined ? swaps.toLocaleString() : "—"}
+              />
+            </div>
+            <div className="sm:border-r border-[rgba(232,238,245,0.08)]">
+              <LiveStat
+                label="Hook Fee"
+                value={
+                  feePips !== undefined && feePips > 0
+                    ? `${(feePips / 10000).toFixed(2)}%`
+                    : "—"
+                }
+                accent
               />
             </div>
             <a

@@ -8,15 +8,19 @@ export const XLAYER_TESTNET = {
 };
 
 export const ADDRESSES = {
-  hook: "0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40",
+  // v2 dynamic-fee hook (beforeSwap-governed). v1 hook (access-control only)
+  // remains deployed at 0xcc42…8A40 as the original submission.
+  hook: "0x26b7228e75c5Ba4f256aa88b7141290518D70Ac0",
+  hookV1: "0xcc42190a78f66BEc53F4E7Da81Ed4aA857628A40",
   token0: "0x573b5717Ff7e1C70573234Dc68aa064f70AbfeF6",
   token1: "0x71642C9FeB621D9A5d536d7A255C573c16C6Fd12",
   poolManager: "0x640c8A28f81D7E7087AEec0d6A9D9efdA1694B92",
   swapRouter: "0x9836796875956DEF7CED74C758f9E04682Dfbe2e",
 } as const;
 
+// Live event on the v2 dynamic-fee pool.
 export const EVENT_ID =
-  "0x7e62176d34f6ec0157e28f14dc9d431dfedc1dff4cfe9fab73c5c259186e8864";
+  "0x8e7d3d968700fe8f2e70bd7e29ab516930388419d00a6133a266bc504435a38b";
 
 // Real, verifiable contracts shown in the "Verify on-chain" panel.
 export const CONTRACT_LINKS = [
@@ -28,26 +32,26 @@ export const CONTRACT_LINKS = [
 ] as const;
 
 // Full prediction lifecycle, each step verifiable on X Layer testnet.
-// Create / Predict / Swap are from the live Argentina vs Brazil event;
+// Create / Predict / Swap are from the live v2 dynamic-fee event;
 // Resolve / Settle / Claim are from a completed demo event (the live event
 // is still open for predictions).
 export const LIFECYCLE_TXS = [
   {
     step: "Create",
-    label: "Create event",
-    hash: "0xcd3e7ec24f0a5219bcdbbef097c8bb1c1039effeecdfe828c0934fcd953c64ca",
+    label: "Create event (dynamic-fee pool)",
+    hash: "0xc4492c58d5f16624e3e829935664d3cd337381cbc4f8c62329348f6d7c5564e7",
     live: true,
   },
   {
     step: "Predict",
     label: "Predict · Argentina",
-    hash: "0x15e4b26d7c240be40eb6c53b68e58da1fb84ae1e784a74f7daa80a46e46a22e9",
+    hash: "0x3ebdde0c64be51f8dcb9be5662b092c1e8986918cccaf67c16850f843c21aa8d",
     live: true,
   },
   {
     step: "Swap",
-    label: "Swap · generate yield",
-    hash: "0xca7ed2eb54c7edc3aa96fb0cf7650b2f9313da79e3558868659798a0dc0b478d",
+    label: "Swap · hook sets the fee",
+    hash: "0xb97433f43b55deb46a6f77ce80cbb2430b22b362cbd73e8be2950e5c01e2113e",
     live: true,
   },
   {
@@ -90,6 +94,7 @@ export const HOOK_ABI = [
   "function predict(bytes32,uint8,uint256,uint256)",
   "function claim(bytes32)",
   "function depositsPerOutcome0(bytes32,uint8) view returns (uint256)",
+  "function currentFeePips(bytes32) view returns (uint24)",
 ];
 
 export const ERC20_ABI = [
@@ -107,10 +112,12 @@ export const SWAP_ROUTER_ABI = [
 ];
 
 // PoolKey tuple for the live ppUSDC/ppWETH pool (currency0 < currency1).
+// fee = 0x800000 (DYNAMIC_FEE_FLAG): the hook sets the actual fee per swap.
+export const DYNAMIC_FEE_FLAG = 0x800000;
 export const POOL_KEY: readonly [string, string, number, number, string] = [
   ADDRESSES.token0,
   ADDRESSES.token1,
-  3000,
+  DYNAMIC_FEE_FLAG,
   60,
   ADDRESSES.hook,
 ];

@@ -12,6 +12,7 @@ import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {LiquidityAmounts} from "@uniswap/v4-periphery/src/libraries/LiquidityAmounts.sol";
 import {IERC20} from "@uniswap/v4-core/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@uniswap/v4-core/lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -22,6 +23,7 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
     using SafeERC20 for IERC20;
+    using LPFeeLibrary for uint24;
 
     // ─── Errors ─────────────────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
     error OutcomeMismatch();
     error PoolHasActiveEvent();
     error SettlementTooEarly();
+    error TradingClosed();
     error ZeroAddress();
     error ZeroAmount();
 
@@ -62,6 +65,7 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         bytes32 indexed eventId, address indexed user, uint8 outcome, uint256 amount0, uint256 amount1
     );
     event ProtocolFeeUpdated(uint256 bps, address recipient);
+    event YieldBoosted(bytes32 indexed eventId, address indexed swapper, uint24 feePips, uint256 swapCount);
 
     // ─── Constants ──────────────────────────────────────────────────────
 
@@ -71,6 +75,13 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
     uint256 public constant MAX_PROTOCOL_FEE_BPS = 1000;
     uint256 public constant MIN_DEPOSIT = 1e15;
     uint256 public constant SETTLEMENT_DELAY = 3600;
+
+    // Deadline-aware dynamic fee: the hook ramps the LP fee from BASE -> PEAK over
+    // the final FEE_RAMP_WINDOW before kickoff, so peak match hype funds a bigger
+    // prize. Fees accrue to the hook (the sole LP) and flow to winners via claim().
+    uint24 internal constant BASE_FEE_PIPS = 3000; // 0.30%
+    uint24 internal constant PEAK_FEE_PIPS = 10000; // 1.00%
+    uint256 internal constant FEE_RAMP_WINDOW = 7 days;
 
     // ─── State Variables ────────────────────────────────────────────────
 
@@ -455,18 +466,41 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         return IHooks.beforeRemoveLiquidity.selector;
     }
 
-    /// @notice Tracks swap activity per prediction event for yield analytics.
-    /// @dev Increments the event's swapCount so settlement can report yield-generating activity.
-    function afterSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata, BalanceDelta, bytes calldata)
-        external
-        onlyPoolManager
-        returns (bytes4, int128)
-    {
+    /// @notice Records swap activity and emits per-swap yield telemetry.
+    /// @dev Increments swapCount and emits the active hook-driven fee, making the
+    /// prize build-up verifiable on-chain (powers the Verify panel + boost UI).
+    function afterSwap(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.SwapParams calldata,
+        BalanceDelta,
+        bytes calldata
+    ) external onlyPoolManager returns (bytes4, int128) {
         bytes32 eventId = poolEventIds[key.toId()];
         if (eventId != bytes32(0)) {
-            ++_events[eventId].swapCount;
+            PredictionEvent storage evt = _events[eventId];
+            uint256 newCount = ++evt.swapCount;
+            emit YieldBoosted(eventId, sender, _dynamicFee(evt), newCount);
         }
         return (IHooks.afterSwap.selector, 0);
+    }
+
+    /// @notice Current hook-driven swap fee (pips, 1e6 = 100%): ramps linearly from
+    /// BASE_FEE_PIPS to PEAK_FEE_PIPS over the final FEE_RAMP_WINDOW before the
+    /// deadline, pinned at PEAK after it. This is the prediction market's "vig".
+    function _dynamicFee(PredictionEvent storage evt) internal view returns (uint24) {
+        uint256 deadline = evt.deadline;
+        if (deadline == 0 || block.timestamp >= deadline) return PEAK_FEE_PIPS;
+        uint256 remaining = deadline - block.timestamp;
+        if (remaining >= FEE_RAMP_WINDOW) return BASE_FEE_PIPS;
+        uint256 elapsed = FEE_RAMP_WINDOW - remaining;
+        uint256 spread = PEAK_FEE_PIPS - BASE_FEE_PIPS;
+        return uint24(uint256(BASE_FEE_PIPS) + (spread * elapsed) / FEE_RAMP_WINDOW);
+    }
+
+    /// @notice Public view of the current hook-driven swap fee for an event (pips).
+    function currentFeePips(bytes32 eventId) external view returns (uint24) {
+        return _dynamicFee(_events[eventId]);
     }
 
     // ─── Hook Callbacks (unused stubs - required by IHooks) ─────────────
@@ -501,14 +535,32 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
         return (IHooks.afterRemoveLiquidity.selector, BalanceDelta.wrap(0));
     }
 
-    // Stub required by IHooks — not active (beforeSwap permission is false)
-    function beforeSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, bytes calldata)
+    /// @notice Governs every swap: closes trading post-resolution and applies a
+    /// deadline-aware dynamic fee whose proceeds become prize yield.
+    /// @dev This is what makes the pool a prediction market — a plain pool cannot
+    /// price swaps off event state or lock trading at settlement.
+    function beforeSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata, bytes calldata)
         external
         view
         onlyPoolManager
         returns (bytes4, BeforeSwapDelta, uint24)
     {
-        return (IHooks.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+        bytes32 eventId = poolEventIds[key.toId()];
+        if (eventId == bytes32(0)) {
+            return (IHooks.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+        }
+
+        PredictionEvent storage evt = _events[eventId];
+        // Lifecycle gate: trading is bound to the match — closed once the outcome
+        // is known (resolved) or funds are returning (settled / cancelled).
+        if (evt.resolved || evt.settled || evt.cancelled) revert TradingClosed();
+
+        // Only dynamic-fee pools may receive a fee override.
+        uint24 feeOverride = 0;
+        if (key.fee.isDynamicFee()) {
+            feeOverride = _dynamicFee(evt) | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        }
+        return (IHooks.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, feeOverride);
     }
 
     function beforeDonate(address, PoolKey calldata, uint256, uint256, bytes calldata)
@@ -724,7 +776,7 @@ contract PredictaPoolHook is IHooks, IUnlockCallback, ReentrancyGuard, Pausable 
             afterAddLiquidity: false,
             beforeRemoveLiquidity: true,
             afterRemoveLiquidity: false,
-            beforeSwap: false,
+            beforeSwap: true,
             afterSwap: true,
             beforeDonate: false,
             afterDonate: false,
