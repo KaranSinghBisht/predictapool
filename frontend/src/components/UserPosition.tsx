@@ -27,7 +27,7 @@ function fmt(v: bigint) {
 }
 
 function shareUrl(team: string) {
-  const text = `I'm backing ${team} to win at the FIFA World Cup 2026 on PredictaPool — and earning real Uniswap V4 swap-fee yield while I wait. ⚽\n\nPredict → Earn → Win. Built on @XLayerOfficial with @Uniswap V4 Hooks.\n\n#HookTheFuture`;
+  const text = `I'm backing ${team} to win at the FIFA World Cup 2026 on PredictaPool — and earning real Uniswap V4 swap-fee yield while I wait. ⚽\n\nPredict → Earn → Win. Built on @XLayerOfficial with @Uniswap V4 Hooks.\n\n#BuildX`;
   return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
 }
 

@@ -2,7 +2,7 @@
 
 **Yield-Backed Prediction Markets Powered by Uniswap V4 LP Yield**
 
-Built for the [Hook the Future](https://web3.okx.com/xlayer/build-x-hackathon/hook) hackathon by X Layer, Uniswap, and Flap.
+Built on Uniswap V4 Hooks, deployed on X Layer.
 
 ## What is PredictaPool?
 
@@ -15,14 +15,15 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 
 ### How it works
 
-```
-1. CREATE EVENT    Admin creates a prediction event (e.g., "Argentina vs Brazil")
-2. PREDICT         Users deposit tokens + pick an outcome
-                   -> Deposits become LP in a Uniswap V4 pool
-3. EARN            Traders swap in the pool, generating fees for LPs
-4. RESOLVE         Oracle reports the match result
-5. CLAIM           Winners: principal + ALL earned fees
-                   Losers:  principal returned (IL-exposed on volatile pairs)
+```mermaid
+flowchart LR
+    A([Create event]) --> B[Predict<br/>deposit becomes V4 LP]
+    B --> C[Swaps<br/>hook sets the dynamic fee]
+    C --> D{Resolve<br/>oracle reports result}
+    D --> E[Settle<br/>remove LP, tally yield]
+    E --> F([Claim])
+    F --> G[Winners<br/>principal + yield]
+    F --> H[Others<br/>principal share, minus any IL]
 ```
 
 ### Why not Polymarket?
@@ -44,6 +45,27 @@ PredictaPool is a Uniswap V4 Hook that creates **yield-backed prediction markets
 | `beforeAddLiquidity` | Access control — only the Hook can add LP |
 | `beforeRemoveLiquidity` | Access control — only the Hook can remove LP |
 | `afterSwap` | Emits per-swap yield telemetry (`YieldBoosted`) + swap count |
+
+### Hook callback flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Hook as PredictaPoolHook
+    participant PM as Uniswap V4 PoolManager
+
+    Note over User,PM: Predict — your deposit becomes liquidity
+    User->>Hook: predict(eventId, outcome, amounts)
+    Hook->>PM: unlock()
+    PM-->>Hook: unlockCallback(ADD_LIQUIDITY)
+    Hook->>PM: modifyLiquidity() + settle
+    Note over Hook: beforeAddLiquidity blocks external LPs
+
+    Note over User,PM: Swap — the hook runs the market
+    User->>PM: swap() via router
+    PM->>Hook: beforeSwap() — dynamic fee + lifecycle gate
+    PM->>Hook: afterSwap() — emit YieldBoosted
+```
 
 ### Contracts
 
@@ -102,6 +124,15 @@ The claim algorithm separates principal from yield:
 
 This design ensures losers always get their principal back (minus IL on volatile pairs), while winners capture all the yield generated during the prediction period.
 
+```mermaid
+flowchart TD
+    S[settleEvent: LP removed] --> T[Total returned to pool]
+    T --> P[Principal portion]
+    T --> Y[Yield surplus]
+    P -->|split by share of total deposits| ALL[All depositors]
+    Y -->|split by share of winning outcome| WIN[Winners only]
+```
+
 ### Test Coverage
 
 92 tests covering the full contract surface:
@@ -115,14 +146,11 @@ This design ensures losers always get their principal back (minus IL on volatile
 - Access control: pause/unpause, ownership transfer chains
 - Fuzz testing: random deposit ratios and swap sequences
 
-## Social
+## Links
 
-Follow the build journey: [@PredictaPool](https://x.com/PredictaPool) | Tags: @XLayerOfficial @Uniswap @flapdotsh
-
-Build-in-public posts:
-- [Day 1: Introducing PredictaPool](https://x.com/PredictaPool) — launch announcement
-- [Day 2: How It Works](https://x.com/PredictaPool) — Hook callbacks deep dive
-- [Day 3: Smart Deposit Refunds](https://x.com/PredictaPool) — BalanceDelta refund mechanism
+- **Live app**: [predictapool.vercel.app](https://predictapool.vercel.app)
+- **X / Twitter**: [@PredictaPool](https://x.com/PredictaPool)
+- **Built with**: Uniswap V4 Hooks · X Layer
 
 ## Deployed Contracts (X Layer Testnet - Chain 1952)
 
@@ -186,7 +214,7 @@ forge script script/DemoSettleClaim.s.sol --rpc-url https://testrpc.xlayer.tech 
 - **Explorer**: [oklink.com/xlayer](https://www.oklink.com/xlayer)
 - **Faucet**: [web3.okx.com/xlayer/faucet](https://web3.okx.com/xlayer/faucet)
 
-## Judge Verification (On-Chain Proof)
+## On-Chain Verification
 
 Every step of the prediction lifecycle is verifiable on [X Layer Testnet Explorer](https://www.oklink.com/xlayer-test):
 
@@ -202,11 +230,11 @@ Every step of the prediction lifecycle is verifiable on [X Layer Testnet Explore
 | Settle Demo | [`0xa7007c...`](https://www.oklink.com/xlayer-test/tx/0xa7007c6d027033938b828dedd880bc80c94f4bf10d1392c77844fb07addc223d) |
 | Claim Demo | [`0xb78bba...`](https://www.oklink.com/xlayer-test/tx/0xb78bbad738a1f4cefa9bb05812a662a4b6dbffff8d9161d26d2a9c20d7221449) |
 
-**Note:** X Layer testnet does not have an official Uniswap V4 deployment, so we deploy our own PoolManager. The Hook contract, pool initialization, and all callback behavior are identical to what would run against the official V4 PoolManager.
+**Note:** X Layer **testnet** (chain 1952) has no canonical Uniswap V4 deployment, so for this prototype we deploy our own `v4-core` PoolManager. X Layer **mainnet** (chain 196) does have an official V4 PoolManager (`0x360e68faccca8ca495c1b759fd9eee466db9fb32`), which a production deployment would target directly — the hook, pool initialization, and all callback behavior are identical either way.
 
 ## Known Limitations
 
-This is a hackathon prototype. Production deployment would require:
+This is an early-stage prototype. Production deployment would require:
 
 - **Oracle**: Owner acts as the oracle for event resolution. A production version would use UMA optimistic oracle, Chainlink, or a commit-reveal scheme with a dispute window.
 - **Impermanent Loss**: Principal protection assumes stable asset pairs. For volatile pairs, IL can reduce total returns below deposited principal. The contract handles this gracefully (proportional distribution), but users should be aware.

@@ -293,7 +293,7 @@ export function StatsSection() {
                 boxShadow: "0 0 6px #00d4ff",
               }}
             />
-            Built for #HookTheFuture
+            Built on Uniswap V4 · X Layer
           </div>
         </div>
       </div>
