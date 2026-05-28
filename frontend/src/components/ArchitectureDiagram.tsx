@@ -4,7 +4,7 @@ const FLOW_STEPS = [
   {
     id: "user",
     label: "User",
-    fn: "predict(matchId, outcome, amount)",
+    fn: "predict(eventId, outcome, amt0, amt1)",
     color: "green" as const,
     desc: "Initiates prediction",
   },
@@ -31,10 +31,10 @@ const FLOW_STEPS = [
   },
   {
     id: "yield",
-    label: "Yield Accrual",
+    label: "Swap Tracking",
     fn: "afterSwap()",
     color: "cyan" as const,
-    desc: "Swap fees drip to vault",
+    desc: "Counts swaps on-chain",
   },
   {
     id: "settle",
@@ -60,28 +60,24 @@ function StepBox({
   index: number;
 }) {
   const isCyan = step.color === "cyan";
-  const borderColor = isCyan
-    ? "rgba(0,212,255,0.3)"
-    : "rgba(34,197,94,0.3)";
-  const glowColor = isCyan
-    ? "rgba(0,212,255,0.12)"
-    : "rgba(34,197,94,0.12)";
+  const borderColor = isCyan ? "rgba(0,212,255,0.3)" : "rgba(34,197,94,0.3)";
+  const glowColor = isCyan ? "rgba(0,212,255,0.12)" : "rgba(34,197,94,0.12)";
   const accentText = isCyan ? "#38e0ff" : "#22c55e";
   const dotColor = isCyan ? "#00d4ff" : "#16a34a";
 
   return (
     <div className="flex flex-col items-center">
       <div
-        className="relative w-full rounded-xl px-5 py-4"
+        className="relative w-full rounded-lg px-3.5 py-3"
         style={{
           background: `linear-gradient(160deg, ${glowColor} 0%, #0a1019 100%)`,
           border: `1px solid ${borderColor}`,
         }}
       >
-        {/* Step number */}
-        <div className="flex items-center gap-2 mb-2">
+        {/* Step number + label */}
+        <div className="flex items-center gap-1.5 mb-1.5">
           <span
-            className="size-5 rounded-full flex items-center justify-center font-data text-[10px] font-semibold"
+            className="size-[18px] rounded-full flex items-center justify-center font-data text-[9px] font-semibold"
             style={{
               background: dotColor,
               color: "#051018",
@@ -90,7 +86,7 @@ function StepBox({
             {index + 1}
           </span>
           <span
-            className="font-display text-sm font-semibold"
+            className="font-display text-[13px] font-semibold"
             style={{ color: accentText }}
           >
             {step.label}
@@ -99,14 +95,14 @@ function StepBox({
 
         {/* Function name */}
         <div
-          className="font-data text-xs leading-relaxed mb-1"
-          style={{ color: accentText }}
+          className="font-data text-[11px] leading-snug"
+          style={{ color: accentText, opacity: 0.85 }}
         >
           {step.fn}
         </div>
 
         {/* Description */}
-        <div className="font-data text-[11px] text-[#6b7a8f] leading-snug">
+        <div className="font-data text-[10px] text-[#6b7a8f] leading-snug mt-0.5">
           {step.desc}
         </div>
       </div>
@@ -150,7 +146,7 @@ function Arrow({ direction }: { direction: "down" | "right" }) {
 
 export function ArchitectureDiagram() {
   return (
-    <section className="py-36 relative" id="architecture">
+    <section className="py-24 relative" id="architecture">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -160,7 +156,7 @@ export function ArchitectureDiagram() {
       />
       <div className="relative max-w-[1320px] mx-auto px-[60px]">
         {/* Header */}
-        <div className="max-w-[760px] mb-14">
+        <div className="max-w-[760px] mb-10">
           <span className="font-data text-xs text-[#38e0ff] uppercase tracking-[0.18em]">
             Architecture
           </span>
@@ -175,7 +171,7 @@ export function ArchitectureDiagram() {
         </div>
 
         {/* Legend */}
-        <div className="flex gap-6 mb-8">
+        <div className="flex gap-6 mb-6">
           <div className="flex items-center gap-2">
             <span
               className="size-2.5 rounded-full"
@@ -221,7 +217,7 @@ export function ArchitectureDiagram() {
         </div>
 
         {/* Footnote */}
-        <div className="mt-10 pt-6 border-t border-[rgba(232,238,245,0.08)]">
+        <div className="mt-8 pt-5 border-t border-[rgba(232,238,245,0.08)]">
           <p className="font-data text-xs text-[#6b7a8f]">
             All contract calls are non-custodial. The hook never holds user
             funds outside the Uniswap V4 singleton.

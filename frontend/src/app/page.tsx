@@ -1,15 +1,25 @@
 "use client";
 
+import { ethers } from "ethers";
 import { useWeb3 } from "@/context/Web3Context";
 import { Hero } from "@/components/Hero";
 import { HowItWorks } from "@/components/HowItWorks";
 import { StatsSection } from "@/components/StatsSection";
-import { ArchitectureDiagram } from "@/components/ArchitectureDiagram";
 import { MarketsSection } from "@/components/MarketsSection";
+import { ProofPanel } from "@/components/ProofPanel";
 import Link from "next/link";
 
+function fmtPool(v: bigint): string {
+  const n = parseFloat(ethers.formatEther(v));
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
+  return `$${n.toFixed(0)}`;
+}
+
 export default function Home() {
-  const { address, handleConnect, connectError } = useWeb3();
+  const { address, handleConnect, connectError, eventData } = useWeb3();
+  const pool = eventData ? fmtPool(eventData.totalDeposit0) : undefined;
+  const swaps = eventData ? eventData.swapCount : undefined;
 
   return (
     <>
@@ -22,6 +32,11 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Verify on-chain — trust anchor right after the hero */}
+      <div className="max-w-[1320px] mx-auto px-6 lg:px-[60px] py-14">
+        <ProofPanel pool={pool} swaps={swaps} />
+      </div>
 
       <MarketsSection />
 
@@ -36,7 +51,6 @@ export default function Home() {
       </div>
 
       <HowItWorks />
-      <ArchitectureDiagram />
       <StatsSection />
     </>
   );

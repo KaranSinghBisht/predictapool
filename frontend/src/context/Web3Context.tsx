@@ -83,7 +83,15 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     }
   }, [address]);
 
-  useEffect(() => { refreshChainData().catch(() => {}); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) refreshChainData().catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshChainData]);
   useEffect(() => {
     const id = setInterval(() => { refreshChainData().catch(() => {}); }, POLL_MS);
     return () => clearInterval(id);

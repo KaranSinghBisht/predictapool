@@ -72,9 +72,28 @@ export interface EventData {
   swapCount: number;
 }
 
+type EventTuple = readonly [
+  string,
+  bigint,
+  bigint,
+  boolean,
+  boolean,
+  boolean,
+  bigint,
+  bigint,
+  bigint,
+  bigint,
+  bigint,
+  bigint,
+];
+
 export async function fetchEvent(): Promise<EventData> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const evt = (await readHook.getEvent(EVENT_ID)) as unknown as any[]; // eslint-disable-line
+  // NOTE: `getEvent` is a reserved method on ethers v6 Contract (event lookup),
+  // so we must call the ABI function explicitly via getFunction to avoid a
+  // silent "no matching event" throw.
+  const evt = (await readHook
+    .getFunction("getEvent")
+    .staticCall(EVENT_ID)) as unknown as EventTuple;
   return {
     name: evt[0],
     numOutcomes: Number(evt[1]),

@@ -228,7 +228,13 @@ export function Dashboard({
     prediction?.exists && eventData
       ? computeYield(prediction, eventData)
       : "$0.00";
-  const winRate = prediction?.exists ? "100%" : "--";
+  const result = !prediction?.exists
+    ? "—"
+    : !eventData?.settled
+      ? "Pending"
+      : prediction.outcome === eventData.winningOutcome
+        ? "Won"
+        : "Lost";
 
   return (
     <section className="py-28 relative" id="dashboard">
@@ -279,11 +285,13 @@ export function Dashboard({
             accent="#22c55e"
           />
           <StatCard
-            label="Win Rate"
-            value={winRate}
+            label="Result"
+            value={result}
             sub={
               prediction?.exists
-                ? `${activePositions} position${activePositions === 1 ? "" : "s"} tracked`
+                ? eventData?.settled
+                  ? "Event settled on-chain"
+                  : "Settles after the match"
                 : "Place a prediction to begin"
             }
           />

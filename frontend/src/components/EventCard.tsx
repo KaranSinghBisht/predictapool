@@ -111,12 +111,11 @@ export function EventCard({
   const canAct =
     walletConnected && selectedOutcome !== null && !!depositAmount && !isBusy;
 
+  const hasDeposits = totalDeposit > 0n;
   const pctNum = (i: number) =>
-    totalDeposit === 0n
-      ? 0
-      : (Number(outcomeDeposits[i]) / Number(totalDeposit)) * 100;
-  const pctStr = (i: number) =>
-    totalDeposit === 0n ? "—" : pctNum(i).toFixed(1) + "%";
+    hasDeposits ? (Number(outcomeDeposits[i]) / Number(totalDeposit)) * 100 : 0;
+  const pctStr = (i: number) => pctNum(i).toFixed(1) + "%";
+  const depStr = (i: number) => fmtPool(outcomeDeposits[i]);
 
   return (
     <div className="predict-card">
@@ -175,10 +174,16 @@ export function EventCard({
           {[
             {
               k: "Time Left",
-              v: isLive ? formatTimeLeft(eventData.deadline) : "Ended",
+              v: !isLive ? "Ended" : formatTimeLeft(eventData.deadline),
             },
-            { k: "Total Pool", v: fmtPool(eventData.totalDeposit0) },
-            { k: "Swaps", v: eventData.swapCount.toLocaleString() },
+            {
+              k: "Total Pool",
+              v: fmtPool(eventData.totalDeposit0),
+            },
+            {
+              k: "Swaps",
+              v: eventData.swapCount.toLocaleString(),
+            },
           ].map((m, i) => (
             <div
               key={m.k}
@@ -231,7 +236,7 @@ export function EventCard({
                       {o.label}
                     </div>
                     <div className="font-data text-[11px] text-[#6b7a8f] mt-0.5">
-                      {fmtPool(outcomeDeposits[i])} deposited
+                      {depStr(i)} deposited
                     </div>
                   </div>
                 </div>
@@ -278,12 +283,10 @@ export function EventCard({
         </div>
 
         <div className="flex flex-wrap gap-1.5 mt-2.5">
-          {["100", "500", "1,000", "MAX"].map((q) => (
+          {["50", "100", "250", "500"].map((q) => (
             <button
               key={q}
-              onClick={() =>
-                onDepositChange(q === "MAX" ? "12400" : q.replace(",", ""))
-              }
+              onClick={() => onDepositChange(q.replace(",", ""))}
               disabled={!isLive || !walletConnected || isBusy}
               className="flex-1 bg-[rgba(255,255,255,0.03)] border border-[rgba(232,238,245,0.08)] text-[#b6c2d4] py-2 rounded-lg font-data text-xs cursor-pointer hover:bg-[rgba(255,255,255,0.06)] hover:border-[rgba(232,238,245,0.16)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             >
@@ -326,7 +329,8 @@ export function EventCard({
       {/* Footer strip */}
       <div className="border-t border-dashed border-[rgba(255,255,255,0.08)] px-6 py-3.5 flex justify-between bg-[rgba(0,0,0,0.2)]">
         <span className="font-data text-xs text-[#6b7a8f]">
-          Principal: <span className="text-[#e8eef5]">Always returned</span>
+          Principal-targeted ·{" "}
+          <span className="text-[#e8eef5]">IL-exposed on volatile pairs</span>
         </span>
         {eventData.resolved && (
           <span
