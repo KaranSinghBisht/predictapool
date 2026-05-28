@@ -21,3 +21,9 @@ social/
 
 # Goal file (local planning)
 goal.md
+
+# Vercel
+.vercel
+
+# Local backup
+index.html.bak

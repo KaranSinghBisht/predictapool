@@ -1,0 +1,17 @@
+# Foundry / non-frontend files — Vercel only builds the frontend (rootDirectory=frontend)
+/lib
+/out
+/cache
+/broadcast
+/src
+/test
+/script
+/social
+/docs
+*.sol
+foundry.toml
+foundry.lock
+remappings.txt
+slither.config.json
+index.html.bak
+logo.png
