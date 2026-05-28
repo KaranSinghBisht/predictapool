@@ -27,15 +27,22 @@ interface FlagProps {
   className?: string;
 }
 
-export function Flag({ code, size = 28, square = false, className = "" }: FlagProps) {
+export function Flag({
+  code,
+  size = 28,
+  square = false,
+  className = "",
+}: FlagProps) {
   const cc = CODE_TO_CC[code];
   const height = square ? size : Math.round((size * 3) / 4);
+  // Proportional squircle so every flag has the same shape at any size.
+  const borderRadius = square ? Math.round(size * 0.24) : 5;
   if (!cc) {
     // Neutral fallback (e.g. unknown code) — a muted tile, never an emoji.
     return (
       <span
-        className={`inline-block rounded-[5px] bg-[#1a2433] ${className}`}
-        style={{ width: size, height }}
+        className={`inline-block ${className}`}
+        style={{ width: size, height, borderRadius, background: "#1a2433" }}
       />
     );
   }
@@ -44,11 +51,12 @@ export function Flag({ code, size = 28, square = false, className = "" }: FlagPr
     <img
       src={`/flags/${cc}.svg`}
       alt={`${code} flag`}
-      className={`object-cover rounded-[5px] ${className}`}
+      className={`object-cover ${className}`}
       style={{
         width: size,
         height,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.45)",
+        borderRadius,
+        boxShadow: "0 2px 8px -2px rgba(0,0,0,0.5)",
       }}
     />
   );

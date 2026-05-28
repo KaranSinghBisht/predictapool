@@ -146,7 +146,12 @@ function PreviewCard({ match, index }: { match: MarketMatch; index: number }) {
         {/* Center: Teams */}
         <div className="flex items-center justify-center gap-4 my-5">
           <div className="text-center">
-            <Flag code={match.teamACode} size={46} className="mx-auto mb-2" />
+            <Flag
+              code={match.teamACode}
+              size={46}
+              square
+              className="mx-auto mb-2"
+            />
             <div
               className="font-bold text-lg tracking-tight"
               style={{ color: "#e8eef5" }}
@@ -170,7 +175,12 @@ function PreviewCard({ match, index }: { match: MarketMatch; index: number }) {
           </span>
 
           <div className="text-center">
-            <Flag code={match.teamBCode} size={46} className="mx-auto mb-2" />
+            <Flag
+              code={match.teamBCode}
+              size={46}
+              square
+              className="mx-auto mb-2"
+            />
             <div
               className="font-bold text-lg tracking-tight"
               style={{ color: "#e8eef5" }}

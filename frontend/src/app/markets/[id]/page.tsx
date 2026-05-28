@@ -125,16 +125,7 @@ export default function MarketDetailPage({
           <div>
             <div className="flex items-center gap-4 mb-3">
               <div className="flex items-center gap-3">
-                {market.id === "arg-bra" ? (
-                  <div className="size-12 rounded-2xl overflow-hidden">
-                    <Flag code="ARG" size={48} square />
-                  </div>
-                ) : (
-                  <div
-                    className="size-12 rounded-2xl"
-                    style={{ background: market.teamAColor }}
-                  />
-                )}
+                <Flag code={market.teamACode} size={48} square />
                 <span className="font-display text-2xl font-bold text-[#e8eef5]">
                   {market.teamA}
                 </span>
@@ -146,16 +137,7 @@ export default function MarketDetailPage({
                 <span className="font-display text-2xl font-bold text-[#e8eef5]">
                   {market.teamB}
                 </span>
-                {market.id === "arg-bra" ? (
-                  <div className="size-12 rounded-2xl overflow-hidden">
-                    <Flag code="BRA" size={48} square />
-                  </div>
-                ) : (
-                  <div
-                    className="size-12 rounded-2xl"
-                    style={{ background: market.teamBColor }}
-                  />
-                )}
+                <Flag code={market.teamBCode} size={48} square />
               </div>
             </div>
             <div className="font-data text-sm text-[#6b7a8f]">

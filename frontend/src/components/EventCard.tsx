@@ -140,12 +140,7 @@ export function EventCard({
       <div className="px-6 pt-7 pb-6">
         <div className="grid grid-cols-[1fr_60px_1fr] items-center">
           <div className="flex flex-col items-center gap-2.5">
-            <div
-              className="size-16 rounded-[18px] overflow-hidden flex items-center justify-center"
-              style={{ boxShadow: "0 12px 32px -8px rgba(0,0,0,0.6)" }}
-            >
-              <Flag code="ARG" size={64} square />
-            </div>
+            <Flag code="ARG" size={64} square />
             <span className="font-display font-semibold text-lg">
               Argentina
             </span>
@@ -157,12 +152,7 @@ export function EventCard({
             VS
           </span>
           <div className="flex flex-col items-center gap-2.5">
-            <div
-              className="size-16 rounded-[18px] overflow-hidden flex items-center justify-center"
-              style={{ boxShadow: "0 12px 32px -8px rgba(0,0,0,0.6)" }}
-            >
-              <Flag code="BRA" size={64} square />
-            </div>
+            <Flag code="BRA" size={64} square />
             <span className="font-display font-semibold text-lg">Brazil</span>
             <span className="font-data text-[11px] text-[#6b7a8f] uppercase tracking-[0.1em]">
               BRA

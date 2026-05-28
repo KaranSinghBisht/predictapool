@@ -154,7 +154,7 @@ function MarketCard({ match, index }: { match: MarketMatch; index: number }) {
 
         {/* Teams display */}
         <div className="flex items-center gap-3 mb-4">
-          <Flag code={match.teamACode} size={34} className="shrink-0" />
+          <Flag code={match.teamACode} size={34} square className="shrink-0" />
           <div className="flex-1 min-w-0">
             <div
               className="font-bold text-[15px] truncate"
@@ -193,7 +193,7 @@ function MarketCard({ match, index }: { match: MarketMatch; index: number }) {
               {match.teamBCode}
             </div>
           </div>
-          <Flag code={match.teamBCode} size={34} className="shrink-0" />
+          <Flag code={match.teamBCode} size={34} square className="shrink-0" />
         </div>
 
         {/* Venue info */}
