@@ -44,8 +44,8 @@ function computeYield(
   const totalReturn = parseFloat(ethers.formatEther(eventData.totalReturn0));
   const share = deposit / totalDeposit;
   const yieldAmt = (totalReturn - totalDeposit) * share;
-  if (yieldAmt <= 0) return "$0.00";
-  return `$${yieldAmt.toFixed(2)}`;
+  if (yieldAmt <= 0) return "0.00";
+  return yieldAmt.toFixed(2);
 }
 
 function computePortfolioValue(
@@ -61,9 +61,9 @@ function computePortfolioValue(
     total += parseFloat(ethers.formatEther(prediction.deposit0));
     total += parseFloat(ethers.formatEther(prediction.deposit1));
   }
-  if (total >= 1_000_000) return `$${(total / 1_000_000).toFixed(2)}M`;
-  if (total >= 1000) return `$${(total / 1000).toFixed(1)}k`;
-  return `$${total.toFixed(2)}`;
+  if (total >= 1_000_000) return `${(total / 1_000_000).toFixed(2)}M`;
+  if (total >= 1000) return `${(total / 1000).toFixed(1)}k`;
+  return total.toFixed(2);
 }
 
 function StatCard({
@@ -260,12 +260,16 @@ export function Dashboard({
             Track your positions, yield, and performance across prediction
             markets.
           </p>
+          <p className="font-data text-xs text-[#6b7a8f] mt-2.5">
+            Balances are X Layer testnet mock tokens (ppUSDC / ppWETH) — no real
+            value.
+          </p>
         </div>
 
         {/* Stat cards row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           <StatCard
-            label="Total Portfolio Value"
+            label="Holdings · test tokens"
             value={portfolioValue}
             sub={
               balances
@@ -281,7 +285,7 @@ export function Dashboard({
           <StatCard
             label="Yield Earned"
             value={yieldEarned}
-            sub="From swap fee accrual"
+            sub="ppUSDC · from swap fees"
             accent="#22c55e"
           />
           <StatCard
