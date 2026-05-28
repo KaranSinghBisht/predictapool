@@ -41,6 +41,17 @@ export default function RootLayout({
       className={`${inter.variable} ${display.variable} ${mono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col">
+        {/*
+          Swallow the benign "Cannot redefine property: ethereum" error thrown
+          when two EVM wallet extensions both try to inject window.ethereum.
+          It's a browser-extension collision, not an app fault, but it would
+          otherwise trip Next's dev error overlay.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(typeof window==='undefined')return;var isWalletErr=function(m){m=String(m||'');return m.indexOf('Cannot redefine property: ethereum')!==-1||m.indexOf('Cannot set property ethereum')!==-1||(m.indexOf('ethereum')!==-1&&m.indexOf('which has only a getter')!==-1);};var h=function(e){var m=e&&(e.message||(e.reason&&(e.reason.message||e.reason)));if(isWalletErr(m)){if(e.preventDefault)e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return false;}};window.addEventListener('error',h,true);window.addEventListener('unhandledrejection',h,true);})();`,
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>
