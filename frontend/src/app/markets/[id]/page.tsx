@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ethers } from "ethers";
 import { useWeb3 } from "@/context/Web3Context";
 import { getMarketById } from "@/lib/markets";
+import { explorerTx } from "@/lib/contracts";
 import { ProofPanel } from "@/components/ProofPanel";
 import { EventCard } from "@/components/EventCard";
 import { WalletPanel } from "@/components/WalletPanel";
@@ -255,6 +256,52 @@ export default function MarketDetailPage({
                 isPredicting={ctx.isPredicting}
                 isApproved={ctx.isApproved}
               />
+
+              {/* Boost the pool — fire a real swap, watch the count tick up */}
+              <div className="bg-[#0a1019] border border-[rgba(232,238,245,0.08)] rounded-[20px] p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display font-semibold text-base text-[#e8eef5]">
+                    Boost the pool
+                  </h3>
+                  <span className="font-data text-[11px] text-[#6b7a8f] uppercase tracking-[0.1em]">
+                    {(ctx.eventData?.swapCount ?? 0).toLocaleString()} swaps
+                  </span>
+                </div>
+                <p className="text-sm text-[#b6c2d4] leading-relaxed mb-4">
+                  Every trade routes through the hook&apos;s{" "}
+                  <span className="font-data text-[#38e0ff]">afterSwap</span>{" "}
+                  callback and adds real LP fees to the pool&apos;s yield. Run
+                  one live and watch the on-chain swap count tick up.
+                </p>
+                <button
+                  onClick={ctx.handleBoost}
+                  disabled={!ctx.address || ctx.isBoosting}
+                  className="btn-cyan w-full py-3.5 text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {!ctx.address
+                    ? "Connect wallet to boost"
+                    : ctx.isBoosting
+                      ? "Swapping…"
+                      : "Run a live swap →"}
+                </button>
+                {ctx.boostStatus && (
+                  <div className="mt-3 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(232,238,245,0.08)] px-4 py-3">
+                    <p className="text-xs font-data text-[#b6c2d4]">
+                      {ctx.boostStatus}
+                    </p>
+                    {ctx.boostTxHash && (
+                      <a
+                        href={explorerTx(ctx.boostTxHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-data text-[#00d4ff] hover:underline mt-1 block"
+                      >
+                        View swap on Explorer &rarr;
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* On-chain proof — real, verifiable lifecycle */}
               <ProofPanel pool={fmtEth(realPool)} swaps={realSwaps} />

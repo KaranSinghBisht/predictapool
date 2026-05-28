@@ -100,6 +100,27 @@ export const ERC20_ABI = [
   "function mint(address,uint256)",
 ];
 
+// PoolSwapTest router — the "Boost the pool" button runs a real swap through
+// this, which fires the hook's afterSwap (swapCount++ and real LP fees).
+export const SWAP_ROUTER_ABI = [
+  "function swap((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) key,(bool zeroForOne,int256 amountSpecified,uint160 sqrtPriceLimitX96) params,(bool takeClaims,bool settleUsingBurn) testSettings,bytes hookData) payable returns (int256)",
+];
+
+// PoolKey tuple for the live ppUSDC/ppWETH pool (currency0 < currency1).
+export const POOL_KEY: readonly [string, string, number, number, string] = [
+  ADDRESSES.token0,
+  ADDRESSES.token1,
+  3000,
+  60,
+  ADDRESSES.hook,
+];
+
+// TickMath.MIN_SQRT_PRICE + 1 and MAX_SQRT_PRICE - 1 (full-range price limits).
+export const SQRT_PRICE_LIMIT = {
+  min: 4295128740n,
+  max: 1461446703485210103287273052203988822378723970341n,
+};
+
 export function explorerTx(hash: string) {
   return `${XLAYER_TESTNET.explorer}/tx/${hash}`;
 }

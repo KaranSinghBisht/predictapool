@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { ethers } from "ethers";
 import {
   connectWallet as connectWalletFn,
@@ -11,7 +18,14 @@ import {
   fetchBalances,
 } from "@/lib/web3";
 import type { EventData, UserPrediction } from "@/lib/web3";
-import { ADDRESSES, EVENT_ID, ERC20_ABI } from "@/lib/contracts";
+import {
+  ADDRESSES,
+  EVENT_ID,
+  ERC20_ABI,
+  SWAP_ROUTER_ABI,
+  POOL_KEY,
+  SQRT_PRICE_LIMIT,
+} from "@/lib/contracts";
 
 const MINT_AMOUNT = ethers.parseEther("1000");
 const POLL_MS = 30_000;
@@ -41,6 +55,10 @@ interface Web3ContextType {
   handleMint: () => Promise<void>;
   handleSelectOutcome: (i: number) => void;
   handleDepositChange: (v: string) => void;
+  isBoosting: boolean;
+  boostStatus: string;
+  boostTxHash: string | null;
+  handleBoost: () => Promise<void>;
 }
 
 const Web3Context = createContext<Web3ContextType | null>(null);
@@ -56,9 +74,17 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
   const [connectError, setConnectError] = useState("");
   const [eventData, setEventData] = useState<EventData | null>(null);
-  const [outcomeDeposits, setOutcomeDeposits] = useState<bigint[]>([0n, 0n, 0n]);
+  const [outcomeDeposits, setOutcomeDeposits] = useState<bigint[]>([
+    0n,
+    0n,
+    0n,
+  ]);
   const [prediction, setPrediction] = useState<UserPrediction | null>(null);
-  const [balances, setBalances] = useState<{ token0: bigint; token1: bigint; native: bigint } | null>(null);
+  const [balances, setBalances] = useState<{
+    token0: bigint;
+    token1: bigint;
+    native: bigint;
+  } | null>(null);
   const [selectedOutcome, setSelectedOutcome] = useState<number | null>(null);
   const [depositAmount, setDepositAmount] = useState("");
   const [isApproved, setIsApproved] = useState(false);
@@ -70,18 +96,30 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [claimStatus, setClaimStatus] = useState("");
   const [mintStatus, setMintStatus] = useState("");
+  const [isBoosting, setIsBoosting] = useState(false);
+  const [boostStatus, setBoostStatus] = useState("");
+  const [boostTxHash, setBoostTxHash] = useState<string | null>(null);
 
-  const refreshChainData = useCallback(async (addr?: string) => {
-    const [evt, deposits] = await Promise.all([fetchEvent(), fetchOutcomeDeposits()]);
-    setEventData(evt);
-    setOutcomeDeposits(deposits);
-    const target = addr ?? address;
-    if (target) {
-      const [pred, bals] = await Promise.all([fetchUserPrediction(target), fetchBalances(target)]);
-      setPrediction(pred);
-      setBalances(bals);
-    }
-  }, [address]);
+  const refreshChainData = useCallback(
+    async (addr?: string) => {
+      const [evt, deposits] = await Promise.all([
+        fetchEvent(),
+        fetchOutcomeDeposits(),
+      ]);
+      setEventData(evt);
+      setOutcomeDeposits(deposits);
+      const target = addr ?? address;
+      if (target) {
+        const [pred, bals] = await Promise.all([
+          fetchUserPrediction(target),
+          fetchBalances(target),
+        ]);
+        setPrediction(pred);
+        setBalances(bals);
+      }
+    },
+    [address],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +131,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     };
   }, [refreshChainData]);
   useEffect(() => {
-    const id = setInterval(() => { refreshChainData().catch(() => {}); }, POLL_MS);
+    const id = setInterval(() => {
+      refreshChainData().catch(() => {});
+    }, POLL_MS);
     return () => clearInterval(id);
   }, [refreshChainData]);
 
@@ -129,7 +169,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setIsApproved(true);
       setTxStatus("Both tokens approved! Ready to predict.");
     } catch (e: unknown) {
-      setTxStatus(`Error: ${(e instanceof Error ? e.message : "Approval failed").slice(0, 80)}`);
+      setTxStatus(
+        `Error: ${(e instanceof Error ? e.message : "Approval failed").slice(0, 80)}`,
+      );
       setIsApproved(false);
     } finally {
       setIsApproving(false);
@@ -144,7 +186,12 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     try {
       const contracts = getContracts(signer);
       const amount = ethers.parseEther(depositAmount);
-      const tx = await contracts.hook.predict(EVENT_ID, selectedOutcome, amount, amount);
+      const tx = await contracts.hook.predict(
+        EVENT_ID,
+        selectedOutcome,
+        amount,
+        amount,
+      );
       setTxHash(tx.hash);
       setTxStatus("Waiting for confirmation…");
       await tx.wait();
@@ -153,7 +200,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setDepositAmount("");
       if (address) await refreshChainData(address);
     } catch (e: unknown) {
-      setTxStatus(`Error: ${(e instanceof Error ? e.message : "Transaction failed").slice(0, 80)}`);
+      setTxStatus(
+        `Error: ${(e instanceof Error ? e.message : "Transaction failed").slice(0, 80)}`,
+      );
     } finally {
       setIsPredicting(false);
     }
@@ -171,7 +220,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setClaimStatus("Claimed! Check your wallet.");
       if (address) await refreshChainData(address);
     } catch (e: unknown) {
-      setClaimStatus(`Error: ${(e instanceof Error ? e.message : "Claim failed").slice(0, 80)}`);
+      setClaimStatus(
+        `Error: ${(e instanceof Error ? e.message : "Claim failed").slice(0, 80)}`,
+      );
     } finally {
       setIsClaiming(false);
     }
@@ -192,9 +243,67 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setMintStatus("Done! 1000 ppUSDC & ppWETH added.");
       await refreshChainData(address);
     } catch (e: unknown) {
-      setMintStatus(`Error: ${(e instanceof Error ? e.message : "Mint failed").slice(0, 80)}`);
+      setMintStatus(
+        `Error: ${(e instanceof Error ? e.message : "Mint failed").slice(0, 80)}`,
+      );
     } finally {
       setIsMinting(false);
+    }
+  };
+
+  // Runs a real swap through the deployed V4 router. This fires the hook's
+  // afterSwap (swapCount++) and generates real LP fees — the "boost yield" demo.
+  const handleBoost = async () => {
+    if (!signer) return;
+    setIsBoosting(true);
+    setBoostStatus("Preparing swap…");
+    setBoostTxHash(null);
+    try {
+      const owner = await signer.getAddress();
+      const amount = ethers.parseEther("25");
+      const token0 = new ethers.Contract(ADDRESSES.token0, ERC20_ABI, signer);
+      const token1 = new ethers.Contract(ADDRESSES.token1, ERC20_ABI, signer);
+      const [a0, a1] = await Promise.all([
+        token0.allowance(owner, ADDRESSES.swapRouter),
+        token1.allowance(owner, ADDRESSES.swapRouter),
+      ]);
+      if (a0 < amount) {
+        setBoostStatus("Approving ppUSDC for swaps…");
+        await (
+          await token0.approve(ADDRESSES.swapRouter, ethers.MaxUint256)
+        ).wait();
+      }
+      if (a1 < amount) {
+        setBoostStatus("Approving ppWETH for swaps…");
+        await (
+          await token1.approve(ADDRESSES.swapRouter, ethers.MaxUint256)
+        ).wait();
+      }
+      const router = new ethers.Contract(
+        ADDRESSES.swapRouter,
+        SWAP_ROUTER_ABI,
+        signer,
+      );
+      const zeroForOne = (eventData?.swapCount ?? 0) % 2 === 0;
+      const limit = zeroForOne ? SQRT_PRICE_LIMIT.min : SQRT_PRICE_LIMIT.max;
+      setBoostStatus("Swapping through the pool…");
+      const tx = await router.swap(
+        [...POOL_KEY],
+        [zeroForOne, -amount, limit],
+        [false, false],
+        "0x",
+      );
+      setBoostTxHash(tx.hash);
+      setBoostStatus("Confirming on X Layer…");
+      await tx.wait();
+      setBoostStatus("Boosted! afterSwap fired — pool swap count +1.");
+      await refreshChainData(address ?? undefined);
+    } catch (e: unknown) {
+      setBoostStatus(
+        `Error: ${(e instanceof Error ? e.message : "Swap failed").slice(0, 80)}`,
+      );
+    } finally {
+      setIsBoosting(false);
     }
   };
 
@@ -211,14 +320,38 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Web3Context.Provider value={{
-      address, connectError, eventData, outcomeDeposits, prediction, balances,
-      selectedOutcome, depositAmount, isApproved,
-      isApproving, isPredicting, isClaiming, isMinting,
-      txStatus, txHash, claimStatus, mintStatus,
-      handleConnect, handleApprove, handlePredict, handleClaim, handleMint,
-      handleSelectOutcome, handleDepositChange,
-    }}>
+    <Web3Context.Provider
+      value={{
+        address,
+        connectError,
+        eventData,
+        outcomeDeposits,
+        prediction,
+        balances,
+        selectedOutcome,
+        depositAmount,
+        isApproved,
+        isApproving,
+        isPredicting,
+        isClaiming,
+        isMinting,
+        txStatus,
+        txHash,
+        claimStatus,
+        mintStatus,
+        handleConnect,
+        handleApprove,
+        handlePredict,
+        handleClaim,
+        handleMint,
+        handleSelectOutcome,
+        handleDepositChange,
+        isBoosting,
+        boostStatus,
+        boostTxHash,
+        handleBoost,
+      }}
+    >
       {children}
     </Web3Context.Provider>
   );

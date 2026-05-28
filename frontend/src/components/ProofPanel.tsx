@@ -213,6 +213,27 @@ export function ProofPanel({ pool, swaps, className }: ProofPanelProps) {
             </a>
           ))}
         </div>
+
+        {/* Completed market — the payoff, settled on-chain */}
+        <div
+          className="mt-4 rounded-lg px-4 py-3"
+          style={{
+            background: "rgba(34,197,94,0.06)",
+            border: "1px solid rgba(34,197,94,0.2)",
+          }}
+        >
+          <div className="font-data text-[11px] text-[#6ee7a0] uppercase tracking-[0.1em] mb-1">
+            Completed market · settled on-chain
+          </div>
+          <p className="text-[13px] text-[#b6c2d4] leading-relaxed">
+            A finished event (France vs Germany) took in{" "}
+            <span className="text-[#e8eef5]">10,000</span> and returned{" "}
+            <span className="text-[#e8eef5]">10,006</span> to depositors —
+            winners claimed principal plus the LP yield, and losing predictions
+            got their principal back. The resolve, settle &amp; claim txs are
+            linked above.
+          </p>
+        </div>
       </div>
     </section>
   );
