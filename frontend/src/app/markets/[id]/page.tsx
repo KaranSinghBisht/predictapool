@@ -10,7 +10,8 @@ import { ProofPanel } from "@/components/ProofPanel";
 import { EventCard } from "@/components/EventCard";
 import { WalletPanel } from "@/components/WalletPanel";
 import { UserPosition } from "@/components/UserPosition";
-import { FlagAR, FlagBR, IconArrow } from "@/components/icons";
+import { IconArrow } from "@/components/icons";
+import { Flag } from "@/components/Flag";
 
 function fmtEth(v: bigint): string {
   const n = parseFloat(ethers.formatEther(v));
@@ -126,7 +127,7 @@ export default function MarketDetailPage({
               <div className="flex items-center gap-3">
                 {market.id === "arg-bra" ? (
                   <div className="size-12 rounded-2xl overflow-hidden">
-                    <FlagAR size={48} />
+                    <Flag code="ARG" size={48} square />
                   </div>
                 ) : (
                   <div
@@ -147,7 +148,7 @@ export default function MarketDetailPage({
                 </span>
                 {market.id === "arg-bra" ? (
                   <div className="size-12 rounded-2xl overflow-hidden">
-                    <FlagBR size={48} />
+                    <Flag code="BRA" size={48} square />
                   </div>
                 ) : (
                   <div

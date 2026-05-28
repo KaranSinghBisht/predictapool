@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { MARKETS, type MarketMatch, type MarketStatus } from "@/lib/markets";
+import { Flag } from "@/components/Flag";
 
 type FilterTab = "all" | "live" | "upcoming" | "settled";
 
@@ -153,7 +154,7 @@ function MarketCard({ match, index }: { match: MarketMatch; index: number }) {
 
         {/* Teams display */}
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-3xl shrink-0">{match.teamAFlag}</span>
+          <Flag code={match.teamACode} size={34} className="shrink-0" />
           <div className="flex-1 min-w-0">
             <div
               className="font-bold text-[15px] truncate"
@@ -192,7 +193,7 @@ function MarketCard({ match, index }: { match: MarketMatch; index: number }) {
               {match.teamBCode}
             </div>
           </div>
-          <span className="text-3xl shrink-0">{match.teamBFlag}</span>
+          <Flag code={match.teamBCode} size={34} className="shrink-0" />
         </div>
 
         {/* Venue info */}

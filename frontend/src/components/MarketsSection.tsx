@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MARKETS, type MarketMatch, type MarketStatus } from "@/lib/markets";
+import { Flag } from "@/components/Flag";
 
 function getBackgroundImage(match: MarketMatch): string {
   if (match.id === "arg-bra") return "/images/match-arg.png";
@@ -145,9 +146,7 @@ function PreviewCard({ match, index }: { match: MarketMatch; index: number }) {
         {/* Center: Teams */}
         <div className="flex items-center justify-center gap-4 my-5">
           <div className="text-center">
-            <span className="text-4xl block mx-auto mb-2">
-              {match.teamAFlag}
-            </span>
+            <Flag code={match.teamACode} size={46} className="mx-auto mb-2" />
             <div
               className="font-bold text-lg tracking-tight"
               style={{ color: "#e8eef5" }}
@@ -171,9 +170,7 @@ function PreviewCard({ match, index }: { match: MarketMatch; index: number }) {
           </span>
 
           <div className="text-center">
-            <span className="text-4xl block mx-auto mb-2">
-              {match.teamBFlag}
-            </span>
+            <Flag code={match.teamBCode} size={46} className="mx-auto mb-2" />
             <div
               className="font-bold text-lg tracking-tight"
               style={{ color: "#e8eef5" }}

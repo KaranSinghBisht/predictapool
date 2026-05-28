@@ -3,7 +3,7 @@
 import { ethers } from "ethers";
 import { OUTCOMES } from "@/lib/contracts";
 import type { UserPrediction, EventData } from "@/lib/web3";
-import { FlagAR, FlagBR } from "@/components/icons";
+import { Flag } from "@/components/Flag";
 
 interface UserPositionProps {
   prediction: UserPrediction;
@@ -64,9 +64,9 @@ export function UserPosition({
       <div className="flex items-center gap-3 mb-4">
         <div className="size-8 rounded-lg overflow-hidden">
           {prediction.outcome === 0 ? (
-            <FlagAR size={32} />
+            <Flag code="ARG" size={32} square />
           ) : prediction.outcome === 2 ? (
-            <FlagBR size={32} />
+            <Flag code="BRA" size={32} square />
           ) : (
             <div
               className="size-8 rounded-lg"

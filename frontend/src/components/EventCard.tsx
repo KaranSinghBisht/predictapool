@@ -4,7 +4,8 @@ import { ethers } from "ethers";
 import { OUTCOMES, explorerTx } from "@/lib/contracts";
 import type { EventData } from "@/lib/web3";
 import { cn } from "@/lib/utils";
-import { FlagAR, FlagBR, IconArrow } from "@/components/icons";
+import { IconArrow } from "@/components/icons";
+import { Flag } from "@/components/Flag";
 
 interface EventCardProps {
   eventData: EventData | null;
@@ -72,8 +73,8 @@ function EmptyCard() {
 }
 
 function OutcomeFlag({ flag }: { flag: string }) {
-  if (flag === "ar") return <FlagAR size={26} />;
-  if (flag === "br") return <FlagBR size={26} />;
+  if (flag === "ar") return <Flag code="ARG" size={24} square />;
+  if (flag === "br") return <Flag code="BRA" size={24} square />;
   return (
     <div
       className="size-[26px] rounded-md"
@@ -143,7 +144,7 @@ export function EventCard({
               className="size-16 rounded-[18px] overflow-hidden flex items-center justify-center"
               style={{ boxShadow: "0 12px 32px -8px rgba(0,0,0,0.6)" }}
             >
-              <FlagAR />
+              <Flag code="ARG" size={64} square />
             </div>
             <span className="font-display font-semibold text-lg">
               Argentina
@@ -160,7 +161,7 @@ export function EventCard({
               className="size-16 rounded-[18px] overflow-hidden flex items-center justify-center"
               style={{ boxShadow: "0 12px 32px -8px rgba(0,0,0,0.6)" }}
             >
-              <FlagBR />
+              <Flag code="BRA" size={64} square />
             </div>
             <span className="font-display font-semibold text-lg">Brazil</span>
             <span className="font-data text-[11px] text-[#6b7a8f] uppercase tracking-[0.1em]">
