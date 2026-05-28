@@ -9,7 +9,7 @@ function truncate(addr: string) {
 }
 
 export function Navbar() {
-  const { address, handleConnect } = useWeb3();
+  const { address, handleConnect, handleMint, isMinting } = useWeb3();
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#05080e]/70 backdrop-blur-xl border-b border-[rgba(232,238,245,0.08)]">
@@ -25,17 +25,53 @@ export function Navbar() {
         </Link>
 
         <nav className="hidden md:flex gap-9">
-          <Link href="/markets" className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors">Markets</Link>
-          <Link href="/markets/arg-bra" className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors">Predict</Link>
-          <Link href="/dashboard" className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors">Dashboard</Link>
-          <Link href="/#how" className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors">How It Works</Link>
+          <Link
+            href="/markets"
+            className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors"
+          >
+            Markets
+          </Link>
+          <Link
+            href="/markets/arg-bra"
+            className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors"
+          >
+            Predict
+          </Link>
+          <Link
+            href="/dashboard"
+            className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/#how"
+            className="text-sm text-[#b6c2d4] hover:text-[#e8eef5] transition-colors"
+          >
+            How It Works
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[rgba(0,212,255,0.06)] border border-[rgba(0,212,255,0.15)] rounded-full">
-            <span className="size-1.5 rounded-full bg-[#22c55e] pulse-dot" style={{ boxShadow: "0 0 4px #22c55e" }} />
-            <span className="font-data text-[11px] text-[#38e0ff]">X Layer</span>
+            <span
+              className="size-1.5 rounded-full bg-[#22c55e] pulse-dot"
+              style={{ boxShadow: "0 0 4px #22c55e" }}
+            />
+            <span className="font-data text-[11px] text-[#38e0ff]">
+              X Layer
+            </span>
           </div>
+
+          {address && (
+            <button
+              onClick={handleMint}
+              disabled={isMinting}
+              title="Mint free testnet ppUSDC + ppWETH"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-data text-[12px] text-[#38e0ff] border border-[rgba(0,212,255,0.3)] bg-[rgba(0,212,255,0.06)] hover:bg-[rgba(0,212,255,0.1)] transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isMinting ? "Minting…" : "Faucet"}
+            </button>
+          )}
 
           {address ? (
             <button
@@ -43,7 +79,10 @@ export function Navbar() {
               className="inline-flex items-center gap-2 px-[18px] py-[10px] rounded-full bg-[rgba(34,197,94,0.14)] text-[#b9f0c9] font-semibold text-sm cursor-pointer border-0"
               style={{ boxShadow: "inset 0 0 0 1px rgba(34, 197, 94, 0.5)" }}
             >
-              <span className="size-2 rounded-full bg-[#22c55e]" style={{ boxShadow: "0 0 6px #22c55e" }} />
+              <span
+                className="size-2 rounded-full bg-[#22c55e]"
+                style={{ boxShadow: "0 0 6px #22c55e" }}
+              />
               <span className="font-data text-[13px]">{truncate(address)}</span>
             </button>
           ) : (

@@ -240,6 +240,31 @@ export default function MarketDetailPage({
         {isReal ? (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 items-start">
             <div className="space-y-6">
+              {ctx.address && ctx.balances && ctx.balances.token0 === 0n && (
+                <div className="rounded-[20px] border border-dashed border-[rgba(0,212,255,0.4)] bg-[rgba(0,212,255,0.06)] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="font-display font-semibold text-[#e8eef5]">
+                      Get test tokens to start
+                    </div>
+                    <p className="font-data text-xs text-[#6b7a8f] mt-1">
+                      You have 0 ppUSDC. Mint free testnet tokens to predict —
+                      they have no real value.
+                    </p>
+                    {ctx.mintStatus && (
+                      <p className="font-data text-[11px] text-[#38e0ff] mt-1.5">
+                        {ctx.mintStatus}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={ctx.handleMint}
+                    disabled={ctx.isMinting}
+                    className="btn-cyan px-5 py-3 text-sm font-semibold shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {ctx.isMinting ? "Minting…" : "Mint test tokens"}
+                  </button>
+                </div>
+              )}
               <EventCard
                 eventData={ctx.eventData}
                 outcomeDeposits={ctx.outcomeDeposits}
